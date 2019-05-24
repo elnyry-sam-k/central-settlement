@@ -27,7 +27,7 @@
 
 const Test = require('tapes')(require('tape'))
 const Sinon = require('sinon')
-const Db = require('../../../../src/models')
+const Db = require('../../../../src/lib/db')
 const Logger = require('@mojaloop/central-services-shared').Logger
 const SettlementFacade = require('../../../../src/models/settlement/facade')
 const ParticipantFacade = require('@mojaloop/central-ledger/src/models/participant/facade')
@@ -182,6 +182,10 @@ Test('Settlement facade', async (settlementFacadeTest) => {
     transferStates: {
       RESERVED: 'RESERVED',
       COMMITTED: 'COMMITTED'
+    },
+    transferStateEnums: {
+      ABORTED: 'ABORTED',
+      RESERVED: 'RESERVED'
     },
     transferParticipantRoleTypes: {
       PAYER_DFSP: 'PAYER_DFSP',
@@ -1145,7 +1149,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             })
           })
           ParticipantFacade.adjustLimits = sandbox.stub()
-          
+
           sandbox.stub(Utility, 'produceGeneralMessage').returns()
 
           let result = await SettlementFacade.settlementTransfersReserve(settlementId, transactionTimestamp, enums, trxStub)
@@ -1535,26 +1539,30 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             andOn: sandbox.stub()
           })
           let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
           let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          let leftJoin2Stub = sandbox.stub().callsArgOn(1, context)
+          let join2Stub = sandbox.stub().callsArgOn(1, context)
           let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
-              leftJoin: join2Stub.returns({
+              leftJoin: sandbox.stub().returns({
                 leftJoin: leftJoin1Stub.returns({
-                  join: join3Stub.returns({
-                    join: sandbox.stub().returns({
-                      join: sandbox.stub().returns({
-                        join: join4Stub.returns({
-                          select: sandbox.stub().returns({
-                            where: sandbox.stub().returns({
-                              whereNull: sandbox.stub().returns({
-                                transacting: sandbox.stub().returns(
-                                  Promise.resolve(
-                                    stubData['settlementTransfersAbort'].settlementTransferList
-                                  )
-                                )
+                  leftJoin: sandbox.stub().returns({
+                    leftJoin: leftJoin2Stub.returns({
+                      join: join2Stub.returns({
+                        join: sandbox.stub().returns({
+                          join: sandbox.stub().returns({
+                            join: join3Stub.returns({
+                              select: sandbox.stub().returns({
+                                where: sandbox.stub().returns({
+                                  whereNull: sandbox.stub().returns({
+                                    transacting: sandbox.stub().returns(
+                                      Promise.resolve(
+                                        stubData['settlementTransfersAbort'].settlementTransferList
+                                      )
+                                    )
+                                  })
+                                })
                               })
                             })
                           })
@@ -1562,6 +1570,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                       })
                     })
                   })
+
                 })
               })
             }),
@@ -1578,7 +1587,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                       Promise.resolve({
                         dfspPositionId: 1,
                         dfspPositionValue: 0,
-                        dfspAbortdValue: 0
+                        dfspAbortedValue: 0
                       })
                     )
                   })
@@ -1698,7 +1707,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                       Promise.resolve({
                         dfspPositionId: 1,
                         dfspPositionValue: 0,
-                        dfspAbortdValue: 0
+                        dfspAbortedValue: 0
                       })
                     )
                   })
@@ -1768,26 +1777,30 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             andOn: sandbox.stub()
           })
           let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
           let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          let leftJoin2Stub = sandbox.stub().callsArgOn(1, context)
+          let join2Stub = sandbox.stub().callsArgOn(1, context)
           let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
-              leftJoin: join2Stub.returns({
+              leftJoin: sandbox.stub().returns({
                 leftJoin: leftJoin1Stub.returns({
-                  join: join3Stub.returns({
-                    join: sandbox.stub().returns({
-                      join: sandbox.stub().returns({
-                        join: join4Stub.returns({
-                          select: sandbox.stub().returns({
-                            where: sandbox.stub().returns({
-                              whereNull: sandbox.stub().returns({
-                                transacting: sandbox.stub().returns(
-                                  Promise.resolve(
-                                    stubData['settlementTransfersAbort'].settlementTransferList
-                                  )
-                                )
+                  leftJoin: sandbox.stub().returns({
+                    leftJoin: leftJoin2Stub.returns({
+                      join: join2Stub.returns({
+                        join: sandbox.stub().returns({
+                          join: sandbox.stub().returns({
+                            join: join3Stub.returns({
+                              select: sandbox.stub().returns({
+                                where: sandbox.stub().returns({
+                                  whereNull: sandbox.stub().returns({
+                                    transacting: sandbox.stub().returns(
+                                      Promise.resolve(
+                                        stubData['settlementTransfersAbort'].settlementTransferList
+                                      )
+                                    )
+                                  })
+                                })
                               })
                             })
                           })
@@ -1795,6 +1808,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                       })
                     })
                   })
+
                 })
               })
             }),
@@ -1811,7 +1825,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                       Promise.resolve({
                         dfspPositionId: 1,
                         dfspPositionValue: 800,
-                        dfspAbortdValue: 0
+                        dfspAbortedValue: 0
                       })
                     )
                   })
@@ -3077,7 +3091,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           })
 
           await SettlementFacade.putById(1, payload['putById'][0], enums)
-          test.fail('Error is not trown!')
+          test.fail('Error is not thrown!')
           test.end()
         } catch (err) {
           Logger.error(`putById failed with error - ${err}`)

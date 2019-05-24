@@ -26,7 +26,7 @@
 
 'use strict'
 
-const Db = require('../index')
+const Db = require('../../lib/db')
 
 module.exports = {
   headers: {
@@ -71,6 +71,23 @@ module.exports = {
       if (transferStateEnumsList) {
         for (let state of transferStateEnumsList) {
           transferStateEnum[`${state.transferStateId}`] = state.transferStateId
+        }
+        return transferStateEnum
+      }
+    } catch (err) {
+      throw err
+    }
+  },
+  transferStateEnums: async function () {
+    try {
+      let transferStateEnum = {}
+      let transferStateEnumsList = await Db.transferState.find({})
+      if (transferStateEnumsList) {
+        for (let state of transferStateEnumsList) {
+          // apply distinct even though final result would contain distinct values
+          if (!transferStateEnum[`${state.enumeration}`]) {
+            transferStateEnum[`${state.enumeration}`] = state.enumeration
+          }
         }
         return transferStateEnum
       }

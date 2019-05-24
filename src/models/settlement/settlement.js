@@ -26,11 +26,11 @@
 
 'use strict'
 
-const Db = require('../index')
+const Db = require('../../lib/db')
 
-const create = async (settlement, enums = {}) => {
+const create = async (settlement) => {
   try {
-    return await Db.settlement.insert({
+    return Db.settlement.insert({
       reason: settlement.reason,
       createdDate: settlement.createdDate
     })
@@ -39,6 +39,15 @@ const create = async (settlement, enums = {}) => {
   }
 }
 
+const getById = async (id) => {
+  try {
+    return Db.settlement.findOne({ settlementId: id })
+  } catch (err) {
+    throw err
+  }
+}
+
 module.exports = {
-  create
+  create,
+  getById
 }

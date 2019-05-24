@@ -21,18 +21,16 @@
  * Georgi Georgiev <georgi.georgiev@modusbox.com>
  --------------
  ******/
-'use strict'
 
-const Test = require('tapes')(require('tape'))
-const Logger = require('@mojaloop/central-services-shared').Logger
+'use strict'
 const Db = require('../../../src/lib/db')
 
-Test('Central Services Database', (test) => {
-  try {
-    test.equal(Db.constructor.name, 'Database', 'db module is loaded')
-  } catch (err) {
-    Logger.error(`test failed with error - ${err}`)
-    test.fail()
+module.exports = {
+  getTransferParticipantsByTransferId: async function (transferId) {
+    try {
+      return Db.transferParticipant.find({ transferId })
+    } catch (e) {
+      throw e
+    }
   }
-  test.end()
-})
+}

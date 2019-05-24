@@ -28,7 +28,7 @@ const Test = require('tapes')(require('tape'))
 const Sinon = require('sinon')
 const Logger = require('@mojaloop/central-services-shared').Logger
 const SettlementTransferParticipantModel = require('../../../../src/models/settlement/settlementTransferParticipant')
-const Db = require('../../../../src/models')
+const Db = require('../../../../src/lib/db')
 
 Test('SettlementTransferParticipantModel', async (settlementTransferParticipantModelTest) => {
   let sandbox
@@ -78,12 +78,12 @@ Test('SettlementTransferParticipantModel', async (settlementTransferParticipantM
           test.ok(whereStub.withArgs(params).calledOnce, 'where with args ... called once')
           test.deepEqual(result, settlementTransferParticipantMock, 'Result matched')
 
-          Db.settlementTransferParticipant.query = sandbox.stub().throws(new Error('Error occured'))
+          Db.settlementTransferParticipant.query = sandbox.stub().throws(new Error('Error occurred'))
           try {
-            result = await SettlementTransferParticipantModel.getBySettlementId(params)
+            await SettlementTransferParticipantModel.getBySettlementId(params)
             test.fail('Error expected, but not thrown!')
           } catch (err) {
-            test.equal(err.message, 'Error occured', `Error "${err.message}" thrown as expected`)
+            test.equal(err.message, 'Error occurred', `Error "${err.message}" thrown as expected`)
           }
           test.end()
         } catch (err) {

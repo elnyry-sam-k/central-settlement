@@ -330,7 +330,7 @@ Test('SettlementService', async (settlementServiceTest) => {
           test.end()
         } catch (err) {
           Logger.error(`settlementEventTriggerTest failed with error - ${err}`)
-          test.equal(err.message, 'Not all provided windows were found', `Error "${err.message}" thrown`)
+          test.equal(err.message, 'At least one settlement window does not exist', `Error "${err.message}" thrown`)
           test.end()
         }
       })
@@ -343,7 +343,7 @@ Test('SettlementService', async (settlementServiceTest) => {
           test.end()
         } catch (err) {
           Logger.error(`settlementEventTriggerTest failed with error - ${err}`)
-          test.equal(err.message, 'At least one settlement window is not CLOSED/ABORTED', `Error "${err.message}" thrown`)
+          test.equal(err.message, 'At least one settlement window is not in CLOSED or ABORTED state', `Error "${err.message}" thrown`)
           test.end()
         }
       })
@@ -458,7 +458,7 @@ Test('SettlementService', async (settlementServiceTest) => {
           params = { settlementId, participantId, accountId }
           SettlementModel.getAccountInSettlement = sandbox.stub().returns()
           try {
-            result = await SettlementService.getByIdParticipantAccount(params, enums)
+            await SettlementService.getByIdParticipantAccount(params, enums)
             test.fail('Error expected, but not thrown!')
           } catch (err) {
             test.equal(err.message, 'Account not in settlement', `Error "${err.message}" thrown as expected`)
@@ -473,7 +473,7 @@ Test('SettlementService', async (settlementServiceTest) => {
           params = { settlementId, participantId, accountId }
           SettlementModel.getById = sandbox.stub().returns()
           try {
-            result = await SettlementService.getByIdParticipantAccount(params, enums)
+            await SettlementService.getByIdParticipantAccount(params, enums)
             test.fail('Error expected, but not thrown!')
           } catch (err) {
             test.equal(err.message, 'Settlement not found', `Error "${err.message}" thrown as expected`)
@@ -488,7 +488,7 @@ Test('SettlementService', async (settlementServiceTest) => {
           SettlementModel.getById = sandbox.stub().returns(settlementMock)
           SettlementModel.checkParticipantAccountExists = sandbox.stub().returns()
           try {
-            result = await SettlementService.getByIdParticipantAccount(params, enums)
+            await SettlementService.getByIdParticipantAccount(params, enums)
             test.fail('Error expected, but not thrown!')
           } catch (err) {
             test.equal(err.message, 'Provided account does not match any participant position account', `Error "${err.message}" thrown as expected`)
@@ -502,7 +502,7 @@ Test('SettlementService', async (settlementServiceTest) => {
 
           SettlementModel.settlementParticipantCurrency.getAccountsInSettlementByIds = sandbox.stub().returns([])
           try {
-            result = await SettlementService.getByIdParticipantAccount(params, enums)
+            await SettlementService.getByIdParticipantAccount(params, enums)
             test.fail('Error expected, but not thrown!')
           } catch (err) {
             test.equal(err.message, 'Participant not in settlement', `Error "${err.message}" thrown as expected`)

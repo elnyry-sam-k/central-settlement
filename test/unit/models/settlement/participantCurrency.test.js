@@ -28,7 +28,7 @@ const Test = require('tapes')(require('tape'))
 const Sinon = require('sinon')
 const Logger = require('@mojaloop/central-services-shared').Logger
 const ParticipantCurrencyModel = require('../../../../src/models/settlement/participantCurrency')
-const Db = require('../../../../src/models')
+const Db = require('../../../../src/lib/db')
 
 Test('ParticipantCurrencyModel', async (participantCurrencyModelTest) => {
   let sandbox
@@ -55,7 +55,7 @@ Test('ParticipantCurrencyModel', async (participantCurrencyModelTest) => {
               POSITION: 1
             }
           }
-          const participantCurrecyIdMock = 1
+          const participantCurrencyIdMock = 1
 
           const builderStub = sandbox.stub()
           Db.participantCurrency = {
@@ -69,7 +69,7 @@ Test('ParticipantCurrencyModel', async (participantCurrencyModelTest) => {
             where: whereStub.returns({
               andWhere: andWhereStub1.returns({
                 andWhere: andWhereStub2.returns({
-                  first: sandbox.stub().returns(participantCurrecyIdMock)
+                  first: sandbox.stub().returns(participantCurrencyIdMock)
                 })
               })
             })
@@ -81,14 +81,14 @@ Test('ParticipantCurrencyModel', async (participantCurrencyModelTest) => {
           test.ok(whereStub.withArgs({ participantId }).calledOnce, 'where with args ... called once')
           test.ok(andWhereStub1.withArgs('participantCurrencyId', accountId).calledOnce, 'where with args ... called once')
           test.ok(andWhereStub2.withArgs('ledgerAccountTypeId', enums.ledgerAccountTypes.POSITION).calledOnce, 'where with args ... called once')
-          test.equal(result, participantCurrecyIdMock, 'Result matched')
+          test.equal(result, participantCurrencyIdMock, 'Result matched')
 
-          Db.participantCurrency.query = sandbox.stub().throws(new Error('Error occured'))
+          Db.participantCurrency.query = sandbox.stub().throws(new Error('Error occurred'))
           try {
-            result = await ParticipantCurrencyModel.checkParticipantAccountExists(params)
+            await ParticipantCurrencyModel.checkParticipantAccountExists(params)
             test.fail('Error expected, but not thrown!')
           } catch (err) {
-            test.equal(err.message, 'Error occured', `Error "${err.message}" thrown as expected`)
+            test.equal(err.message, 'Error occurred', `Error "${err.message}" thrown as expected`)
           }
           test.end()
         } catch (err) {

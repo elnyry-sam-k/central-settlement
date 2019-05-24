@@ -16,13 +16,29 @@
  their names indented and be marked with a '-'. Email address can be added
  optionally within square brackets <email>.
  * Gates Foundation
- * Georgi Georgiev <georgi.georgiev@modusbox.com>
- * Valentin Genev <valentin.genev@modusbox.com>
- * Deon Botha <deon.botha@modusbox.com>
- * Rajiv Mothilal <rajiv.mothilal@modusbox.com>
- * Miguel de Barros <miguel.debarros@modusbox.com>
+ - Name Surname <name.surname@gatesfoundation.com>
 
+ * Georgi Georgiev <georgi.georgiev@modusbox.com>
  --------------
  ******/
 
-module.exports = require('@mojaloop/central-services-database').Db
+'use strict'
+
+const Db = require('../../lib/db')
+
+const getBySettlementId = async (id) => {
+  try {
+    const knex = await Db.getKnex()
+    return knex('settlementStateChange')
+      .where('settlementId', id)
+      .orderBy('settlementStateChangeId', 'desc')
+      .select('*')
+      .first()
+  } catch (err) {
+    throw err
+  }
+}
+
+module.exports = {
+  getBySettlementId
+}

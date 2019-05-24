@@ -31,7 +31,7 @@
 const Hapi = require('hapi')
 const HapiOpenAPI = require('hapi-openapi')
 const Path = require('path')
-const Db = require('./models')
+const Db = require('./lib/db')
 const Enums = require('./models/lib/enums')
 const Config = require('./lib/config')
 
@@ -45,15 +45,15 @@ const defaultConfig = {
   port: Config.PORT,
   cache: [
     {
-      name: 'memCache',
-      engine: require('catbox-memory'),
-      partition: 'cache'
+      provider: {
+        constructor: require('catbox-memory'),
+        options: {
+          partition: 'cache'
+        }
+      },
+      name: 'memCache'
     }
-  ] // ,
-  // debug: {
-  //   request: ['error'],
-  //   log: ['error']
-  // }
+  ]
 }
 
 const getEnums = (id) => {

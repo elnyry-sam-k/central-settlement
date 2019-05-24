@@ -28,7 +28,7 @@ const Test = require('tapes')(require('tape'))
 const Sinon = require('sinon')
 const Logger = require('@mojaloop/central-services-shared').Logger
 const SettlementModel = require('../../../../src/models/settlement/settlement')
-const Db = require('../../../../src/models')
+const Db = require('../../../../src/lib/db')
 
 Test('SettlementModel', async (settlementModelTest) => {
   let sandbox
@@ -64,12 +64,12 @@ Test('SettlementModel', async (settlementModelTest) => {
             createdDate: settlement.createdDate
           }).calledOnce, 'insert with args ... called once')
 
-          Db.settlement.insert = sandbox.stub().throws(new Error('Error occured'))
+          Db.settlement.insert = sandbox.stub().throws(new Error('Error occurred'))
           try {
-            result = await SettlementModel.create(settlement)
+            await SettlementModel.create(settlement)
             test.fail('Error expected, but not thrown!')
           } catch (err) {
-            test.equal(err.message, 'Error occured', `Error "${err.message}" thrown as expected`)
+            test.equal(err.message, 'Error occurred', `Error "${err.message}" thrown as expected`)
           }
           test.end()
         } catch (err) {
@@ -84,6 +84,57 @@ Test('SettlementModel', async (settlementModelTest) => {
       Logger.error(`settlementModelTest failed with error - ${err}`)
       createTest.fail()
       createTest.end()
+    }
+  })
+
+  await settlementModelTest.test('settlementModel should', async getByIdTest => {
+    try {
+      await getByIdTest.test('throw error if Database unavailable', async test => {
+        try {
+          const settlementId = 1
+          Db.settlement = {
+            findOne: sandbox.stub()
+          }
+          Db.settlement.findOne = sandbox.stub().throws(new Error('Error occurred'))
+          try {
+            await SettlementModel.getById(settlementId)
+            test.fail('Error expected, but not thrown!')
+          } catch (err) {
+            test.ok(err.message, 'Error thrown')
+            test.end()
+          }
+        } catch (err) {
+          test.end()
+        }
+      })
+
+      await getByIdTest.test('get settlement by id', async test => {
+        try {
+          const settlementId = 1
+          const settlement = {
+            settlementId,
+            reason: 'reason',
+            createdDate: '2019-02-18T15:44:28.000Z',
+            currentStateChangeId: 36
+          }
+          Db.settlement = {
+            findOne: sandbox.stub().returns(settlement)
+          }
+          let result = await SettlementModel.getById(settlementId)
+          test.deepEqual(result, settlement, 'results match')
+          test.end()
+        } catch (err) {
+          Logger.error(`getByIdTest failed with error - ${err}`)
+          test.fail()
+          test.end()
+        }
+      })
+
+      await getByIdTest.end()
+    } catch (err) {
+      Logger.error(`settlementModelTest failed with error - ${err}`)
+      getByIdTest.fail()
+      getByIdTest.end()
     }
   })
 

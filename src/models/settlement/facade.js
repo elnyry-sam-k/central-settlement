@@ -27,7 +27,7 @@
 'use strict'
 
 const Boom = require('boom')
-const Db = require('../index')
+const Db = require('../../lib/db')
 const Uuid = require('uuid4')
 const Crypto = require('crypto')
 const Config = require('../../lib/config')
@@ -389,13 +389,15 @@ const settlementTransfersAbort = async function (settlementId, transactionTimest
         this.on('spcsc.settlementParticipantCurrencyId', 'spc.settlementParticipantCurrencyId')
           .andOn('spcsc.settlementStateId', knex.raw('?', [enums.settlementStates.ABORTED]))
       })
-      .leftJoin('transferStateChange AS tsc1', function () {
-        this.on('tsc1.transferId', 'spc.settlementTransferId')
-          .andOn('tsc1.transferStateId', knex.raw('?', [enums.transferStates.RESERVED]))
+      .leftJoin('transferStateChange AS tsc1', 'tsc1.transferId', 'spc.settlementTransferId')
+      .leftJoin('transferState AS ts1', function () {
+        this.on('ts1.transferStateId', 'tsc1.transferStateId')
+          .andOn('ts1.enumeration', knex.raw('?', [enums.transferStateEnums.RESERVED]))
       })
-      .leftJoin('transferStateChange AS tsc2', function () {
-        this.on('tsc2.transferId', 'spc.settlementTransferId')
-          .andOn('tsc2.transferStateId', knex.raw('?', [enums.transferStates.ABORTED]))
+      .leftJoin('transferStateChange AS tsc2', 'tsc2.transferId', 'spc.settlementTransferId')
+      .leftJoin('transferState AS ts2', function () {
+        this.on('ts2.transferStateId', 'tsc2.transferStateId')
+          .andOn('ts2.enumeration', knex.raw('?', [enums.transferStateEnums.ABORTED]))
       })
       .join('transferParticipant AS tp1', function () {
         this.on('tp1.transferId', 'spc.settlementTransferId')
@@ -575,9 +577,17 @@ const settlementTransfersCommit = async function (settlementId, transactionTimes
         for (let { transferId, ledgerEntryTypeId, dfspAccountId, dfspAmount, hubAccountId, hubAmount,
           dfspName, currencyId } of settlementTransferList) {
           // Persist transfer fulfilment and transfer state change
+          const transferFulfilmentId = Uuid()
+          await knex('transferFulfilmentDuplicateCheck')
+            .insert({
+              transferFulfilmentId,
+              transferId
+            })
+            .transacting(trx)
+
           await knex('transferFulfilment')
             .insert({
-              transferFulfilmentId: Uuid(),
+              transferFulfilmentId,
               transferId,
               ilpFulfilment: 0,
               completedDate: transactionTimestamp,
@@ -1358,7 +1368,7 @@ const Facade = {
           .innerJoin('settlementWindow AS sw', 'sw.settlementWindowId', 'ssw.settlementWindowId')
           .innerJoin('settlementWindowStateChange AS swsc', 'swsc.settlementWindowStateChangeId', 'sw.currentStateChangeId')
           .innerJoin('settlementTransferParticipant AS stp', function () {
-            this.on('stp.settlementWindowId', 'settlement.settlementId')
+            this.on('stp.settlementId', 'settlement.settlementId')
               .andOn('stp.settlementWindowId', 'sw.settlementWindowId')
           })
           .innerJoin('settlementParticipantCurrency AS spc', function () {

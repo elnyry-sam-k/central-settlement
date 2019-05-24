@@ -29,7 +29,7 @@ const InitServer = require('./../../../../src/setup').initialize
 const Enums = require('./../../../../src/models/lib/enums')
 const Logger = require('@mojaloop/central-services-shared').Logger
 const settlement = require('./../../../../src/domain/settlement')
-const Db = require('./../../../../src/models')
+const Db = require('./../../../../src/lib/db')
 /**
  * Test for /settlementWindows
  */
@@ -160,6 +160,7 @@ Test('/settlements/{id}', async (settlementTest) => {
     sandbox.stub(Enums, 'settlementWindowStates').returns({})
     sandbox.stub(Enums, 'transferParticipantRoleTypes').returns({})
     sandbox.stub(Enums, 'transferStates').returns({})
+    sandbox.stub(Enums, 'transferStateEnums').returns({})
     sandbox.stub(settlement, 'putById').returns({})
     try {
       const requests = new Promise((resolve, reject) => {
@@ -218,6 +219,7 @@ Test('/settlements/{id}', async (settlementTest) => {
     sandbox.stub(Enums, 'settlementWindowStates').returns({})
     sandbox.stub(Enums, 'transferParticipantRoleTypes').returns({})
     sandbox.stub(Enums, 'transferStates').returns({})
+    sandbox.stub(Enums, 'transferStateEnums').returns({})
     sandbox.stub(settlement, 'abortById').returns({})
     try {
       const requests = new Promise((resolve, reject) => {
@@ -230,6 +232,7 @@ Test('/settlements/{id}', async (settlementTest) => {
       })
 
       const mock = await requests
+      mock.request.body.state = 'ABORTED'
 
       t.ok(mock)
       t.ok(mock.request)
@@ -258,6 +261,65 @@ Test('/settlements/{id}', async (settlementTest) => {
 
       const response = await server.inject(options)
       t.equal(response.statusCode, 200, 'Ok response status')
+      t.end()
+    } catch (e) {
+      Logger.error(`testing error ${e}`)
+      t.fail()
+      t.end()
+    }
+  })
+
+  await settlementTest.test('test settlements put operation :: invlidState', async (t) => {
+    sandbox.stub(Enums, 'ledgerAccountTypes').returns({})
+    sandbox.stub(Enums, 'ledgerEntryTypes').returns({})
+    sandbox.stub(Enums, 'participantLimitTypes').returns({})
+    sandbox.stub(Enums, 'settlementStates').returns({ ABORTED: 'ABORTED' })
+    sandbox.stub(Enums, 'settlementWindowStates').returns({})
+    sandbox.stub(Enums, 'transferParticipantRoleTypes').returns({})
+    sandbox.stub(Enums, 'transferStates').returns({})
+    sandbox.stub(Enums, 'transferStateEnums').returns({})
+    sandbox.stub(settlement, 'abortById').returns({})
+    try {
+      const requests = new Promise((resolve, reject) => {
+        Mockgen().requests({
+          path: '/settlements/{id}',
+          operation: 'put'
+        }, function (error, mock) {
+          return error ? reject(error) : resolve(mock)
+        })
+      })
+
+      const mock = await requests
+      mock.request.body.state = 'INVALID'
+
+      t.ok(mock)
+      t.ok(mock.request)
+      // Get the resolved path from mock request
+      // Mock request Path templates({}) are resolved using path parameters
+      const options = {
+        method: 'put',
+        url: '/v1' + mock.request.path
+      }
+      if (mock.request.body) {
+        // Send the request body
+        options.payload = mock.request.body
+      } else if (mock.request.formData) {
+        // Send the request form data
+        options.payload = mock.request.formData
+        // Set the Content-Type as application/x-www-form-urlencoded
+        options.headers = options.headers || {}
+        options.headers['Content-Type'] = 'application/x-www-form-urlencoded'
+      }
+      // If headers are present, set the headers.
+      if (mock.request.headers && mock.request.headers.length > 0) {
+        options.headers = mock.request.headers
+      }
+
+      delete options.payload.participants
+
+      const response = await server.inject(options)
+      t.equal(response.statusCode, 400, 'Bad Request response status')
+      t.equal(response.result.message.errorInformation.errorDescription, 'Invalid request payload input', 'Error description matched')
       t.end()
     } catch (e) {
       Logger.error(`testing error ${e}`)
@@ -314,7 +376,7 @@ Test('/settlements/{id}', async (settlementTest) => {
       delete options.payload.reason
 
       const response = await server.inject(options)
-      t.equal(response.statusCode, 400, 'Ok response status')
+      t.equal(response.statusCode, 400, 'Bad Request response status')
       t.end()
     } catch (e) {
       Logger.error(`testing error ${e}`)
@@ -371,7 +433,7 @@ Test('/settlements/{id}', async (settlementTest) => {
       delete options.payload.participants
 
       const response = await server.inject(options)
-      t.equal(response.statusCode, 400, 'Ok response status')
+      t.equal(response.statusCode, 400, 'Bad Request response status')
       t.end()
     } catch (e) {
       Logger.error(`testing error ${e}`)

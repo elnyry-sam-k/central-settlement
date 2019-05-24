@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "version": "1.0.0",
+        "version": "1.1.0",
         "title": "MOJALOOP Central Settlements",
         "description": "Mojaloop API for Settlements."
     },
@@ -273,6 +273,10 @@
                         "type": "string",
                         "enum": [
                             "PENDING_SETTLEMENT",
+                            "PS_TRANSFERS_RECORDED",
+                            "PS_TRANSFERS_RESERVED",
+                            "PS_TRANSFERS_COMMITTED",
+                            "SETTLING",
                             "SETTLED",
                             "ABORTED"
                         ],
@@ -485,7 +489,7 @@
                     "application/json"
                 ],
                 "deprecated": false,
-                "summary": "Acknowledegement of settlement by updating with Settlement Id.",
+                "summary": "Acknowledgement of settlement by updating with Settlement Id.",
                 "operationId": "updateSettlementById",
                 "parameters": [
                     {
@@ -500,7 +504,7 @@
                         "name": "payload",
                         "description": "A JSON object containing settlement update info.",
                         "schema": {
-                            "$ref": "#/definitions/SettlementUpdatebySettlementIdPayload"
+                            "$ref": "#/definitions/SettlementUpdateBySettlementIdPayload"
                         },
                         "required": true
                     }
@@ -622,7 +626,7 @@
                     "application/json"
                 ],
                 "deprecated": false,
-                "summary": "Acknowledegement of settlement by updating with Settlements Id and Participant Id.",
+                "summary": "Acknowledgement of settlement by updating with Settlements Id and Participant Id.",
                 "operationId": "updateSettlementBySettlementParticipant",
                 "parameters": [
                     {
@@ -644,7 +648,7 @@
                         "name": "payload",
                         "description": "A JSON object containing settlement update info.",
                         "schema": {
-                            "$ref": "#/definitions/SettlementUpdateBySettlementPartricipantPayload"
+                            "$ref": "#/definitions/SettlementUpdateBySettlementParticipantPayload"
                         },
                         "required": true
                     }
@@ -773,7 +777,7 @@
                     "application/json"
                 ],
                 "deprecated": false,
-                "summary": "Acknowledegement of settlement by updating the reason and state by Settlements Id, Participant Id and accounts Id.",
+                "summary": "Acknowledgement of settlement by updating the reason and state by Settlements Id, Participant Id and accounts Id.",
                 "operationId": "updateSettlementBySettlementParticipantAccount",
                 "parameters": [
                     {
@@ -872,13 +876,14 @@
                 }
             }
         },
-        "SettlementUpdatebySettlementIdPayload": {
+        "SettlementUpdateBySettlementIdPayload": {
             "type": "object",
             "properties": {
                 "state": {
                     "type": "string",
                     "enum": [
-                        "ABORTED"
+                        "ABORTED",
+                        "INVALID"
                     ]
                 },
                 "reason": {
@@ -931,7 +936,7 @@
                 }
             }
         },
-        "SettlementUpdateBySettlementPartricipantPayload": {
+        "SettlementUpdateBySettlementParticipantPayload": {
             "type": "object",
             "properties": {
                 "accounts": {
@@ -946,7 +951,7 @@
             "type": "object",
             "properties": {
                 "id": {
-                    "description": "Paricipant Currency Id",
+                    "description": "Participant Currency Id",
                     "type": "integer"
                 },
                 "reason": {
