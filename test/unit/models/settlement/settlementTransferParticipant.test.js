@@ -26,7 +26,7 @@
 
 const Test = require('tapes')(require('tape'))
 const Sinon = require('sinon')
-const Logger = require('@mojaloop/central-services-shared').Logger
+const Logger = require('@mojaloop/central-services-logger')
 const SettlementTransferParticipantModel = require('../../../../src/models/settlement/settlementTransferParticipant')
 const Db = require('../../../../src/lib/db')
 
@@ -71,7 +71,7 @@ Test('SettlementTransferParticipantModel', async (settlementTransferParticipantM
             })
           })
 
-          let result = await SettlementTransferParticipantModel.getBySettlementId(params, enums)
+          const result = await SettlementTransferParticipantModel.getBySettlementId(params, enums)
           test.ok(result, 'Result returned')
           test.ok(builderStub.select.withArgs().calledOnce, 'select with args ... called once')
           test.ok(distinctStub.withArgs('settlementWindowId', 'participantCurrencyId').calledOnce, 'distinct with args ... called once')

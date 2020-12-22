@@ -18,26 +18,27 @@
  * Gates Foundation
  - Name Surname <name.surname@gatesfoundation.com>
 
- * Georgi Georgiev <georgi.georgiev@modusbox.com>
- * Valentin Genev <valentin.genev@modusbox.com>
+ * ModusBoc
+ - Georgi Georgiev <georgi.georgiev@modusbox.com>
+ - Valentin Genev <valentin.genev@modusbox.com>
  --------------
  ******/
-
 'use strict'
 
 const Test = require('tapes')(require('tape'))
 const Sinon = require('sinon')
 const Db = require('../../../../src/lib/db')
-const Logger = require('@mojaloop/central-services-shared').Logger
+const Logger = require('@mojaloop/central-services-logger')
 const SettlementFacade = require('../../../../src/models/settlement/facade')
 const ParticipantFacade = require('@mojaloop/central-ledger/src/models/participant/facade')
 const Uuid = require('uuid4')
-const Utility = require('../../../../src/handlers/lib/utility')
+const Utility = require('../../../../src/lib/utility')
+const FSPIOPError = require('@mojaloop/central-services-error-handling').Factory.FSPIOPError
 
 Test('Settlement facade', async (settlementFacadeTest) => {
   let sandbox
   let clock
-  let now = new Date()
+  const now = new Date()
 
   settlementFacadeTest.beforeEach(test => {
     sandbox = Sinon.createSandbox()
@@ -51,8 +52,8 @@ Test('Settlement facade', async (settlementFacadeTest) => {
     test.end()
   })
 
-  let payload = new Map()
-  payload['putById'] = [
+  const payload = new Map()
+  payload.putById = [
     {
       participants: [
         {
@@ -173,7 +174,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
       ]
     }
   ]
-  payload['knexTriggerEvent'] = {
+  payload.triggerSettlementEvent = {
     idList: [1, 2],
     reason: 'text'
   }
@@ -217,15 +218,16 @@ Test('Settlement facade', async (settlementFacadeTest) => {
     settlementWindowStates: {
       PENDING_SETTLEMENT: 'PENDING_SETTLEMENT',
       SETTLED: 'SETTLED',
-      ABORTED: 'ABORTED'
+      ABORTED: 'ABORTED',
+      CLOSED: 'CLOSED'
     },
     participantLimitTypes: {
       NET_DEBIT_CAP: 'NET_DEBIT_CAP'
     }
   }
 
-  let stubData = new Map()
-  stubData['settlementTransfersPrepare'] = {
+  const stubData = new Map()
+  stubData.settlementTransfersPrepare = {
     settlementTransferList: [
       {
         settlementParticipantCurrencyId: 1,
@@ -259,7 +261,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
       }
     ]
   }
-  stubData['settlementTransfersReserve'] = {
+  stubData.settlementTransfersReserve = {
     settlementTransferList: [
       {
         transferId: Uuid(),
@@ -287,7 +289,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
       }
     ]
   }
-  stubData['settlementTransfersAbort'] = {
+  stubData.settlementTransfersAbort = {
     settlementTransferList: [
       {
         transferId: Uuid(),
@@ -315,7 +317,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
       }
     ]
   }
-  stubData['settlementTransfersCommit'] = {
+  stubData.settlementTransfersCommit = {
     settlementTransferList: [
       {
         transferId: Uuid(),
@@ -335,13 +337,14 @@ Test('Settlement facade', async (settlementFacadeTest) => {
       }
     ]
   }
-  stubData['putById'] = [
+  stubData.putById = [
     {
       settlementData: {
         settlementId: 1,
         settlementStateId: 'PENDING_SETTLEMENT',
         reason: 'reason',
-        createdDate: now
+        createdDate: now,
+        autoPositionReset: true
       },
       settlementAccountList: [
         {
@@ -520,14 +523,52 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           currencyId: 'USD',
           participantCurrencyId: 1
         }
-      ]
+      ],
+      processedContent: [{
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 6,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 2,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }]
     },
     {
       settlementData: {
         settlementId: 1,
         settlementStateId: 'PS_TRANSFERS_RECORDED',
         reason: 'reason',
-        createdDate: now
+        createdDate: now,
+        autoPositionReset: true
       },
       settlementAccountList: [
         {
@@ -561,14 +602,52 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           currencyId: 'USD',
           participantCurrencyId: 1
         }
-      ]
+      ],
+      processedContent: [{
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 6,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 2,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }]
     },
     {
       settlementData: {
         settlementId: 1,
         settlementStateId: 'PS_TRANSFERS_RESERVED',
         reason: 'reason',
-        createdDate: now
+        createdDate: now,
+        autoPositionReset: true
       },
       settlementAccountList: [
         {
@@ -602,14 +681,52 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           currencyId: 'USD',
           participantCurrencyId: 1
         }
-      ]
+      ],
+      processedContent: [{
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 6,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 2,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }]
     },
     {
       settlementData: {
         settlementId: 1,
         settlementStateId: 'PS_TRANSFERS_COMMITTED',
         reason: 'reason',
-        createdDate: now
+        createdDate: now,
+        autoPositionReset: true
       },
       settlementAccountList: [
         {
@@ -643,14 +760,68 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           currencyId: 'USD',
           participantCurrencyId: 1
         }
-      ]
+      ],
+      processedContent: [{
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 6,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 2,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }],
+      scaContentToCheck: [{
+        settlementWindowContentId: 1
+      }, {
+        settlementWindowContentId: 2
+      }],
+      unsettledContent: [{
+        settlementWindowContentId: 2
+      }],
+      windowsToCheck: [{
+        settlementWindowId: 1
+      }, {
+        settlementWindowId: 2
+      }],
+      unsettledWindows: [{
+        settlementWindowId: 2
+      }]
     },
     {
       settlementData: {
         settlementId: 1,
         settlementStateId: 'PENDING_SETTLEMENT',
         reason: 'reason',
-        createdDate: now
+        createdDate: now,
+        autoPositionReset: true
       },
       settlementAccountList: [
         {
@@ -684,14 +855,52 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           currencyId: 'USD',
           participantCurrencyId: 1
         }
-      ]
+      ],
+      processedContent: [{
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 6,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 2,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }]
     },
     {
       settlementData: {
         settlementId: 1,
         settlementStateId: 'PS_TRANSFERS_COMMITTED',
         reason: 'reason',
-        createdDate: now
+        createdDate: now,
+        autoPositionReset: false
       },
       settlementAccountList: [
         {
@@ -734,10 +943,47 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           currencyId: 'USD',
           participantCurrencyId: 1
         }
-      ]
+      ],
+      processedContent: [{
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 1,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 6,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }, {
+        settlementWindowId: 2,
+        settlementWindowStateId: 'PENDING_SETTLEEMENT',
+        reason: 'unit testing',
+        createdDate1: 'date',
+        changedDate1: 'date',
+        settlementWindowContentId: 1,
+        state: 'PENDING_SETTLEMENT',
+        ledgerAccountType: 1,
+        currencyId: 'USD',
+        createdDate: 'date',
+        changedDate: 'date'
+      }]
     }
   ]
-  stubData['knexTriggerEvent'] = {
+  stubData.triggerSettlementEvent = {
     settlementId: 1,
     settlementParticipantCurrencyList: [
       {
@@ -756,7 +1002,13 @@ Test('Settlement facade', async (settlementFacadeTest) => {
       {
         settlementWindowStateChangeId: 4
       }
-    ]
+    ],
+    swcIdList: [{
+      settlementWindowContentId: 1
+    }],
+    windowsStateToBeUpdatedIdList: [{
+      settlementWindowId: 1
+    }]
   }
 
   await settlementFacadeTest.test('settlementTransfersPrepare should', async settlementTransfersPrepareTest => {
@@ -798,7 +1050,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                         whereNotNull: sandbox.stub().returns({
                           whereNull: sandbox.stub().returns({
                             transacting: sandbox.stub().returns(
-                              Promise.resolve(stubData['settlementTransfersPrepare'].settlementTransferList)
+                              Promise.resolve(stubData.settlementTransfersPrepare.settlementTransferList)
                             )
                           })
                         })
@@ -813,7 +1065,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             })
           })
 
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub().returns({
               andOn: sandbox.stub().returns({
@@ -821,7 +1073,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
               })
             })
           })
-          let participantCurrencyJoinStub = sandbox.stub().callsArgOn(1, context)
+          const participantCurrencyJoinStub = sandbox.stub().callsArgOn(1, context)
           knexStub.withArgs('participantCurrency AS pc1').returns({
             join: participantCurrencyJoinStub.returns({
               select: sandbox.stub().returns({
@@ -835,7 +1087,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
               })
             })
           })
-          let result = await SettlementFacade.settlementTransfersPrepare(settlementId, transactionTimestamp, enums, trxStub)
+          const result = await SettlementFacade.settlementTransfersPrepare(settlementId, transactionTimestamp, enums, trxStub)
           test.equal(result, 0, 'Result for successful operation returned')
           test.equal(knexStub.withArgs('settlementParticipantCurrency AS spc').callCount, 1)
           test.equal(knexStub().join.withArgs('settlementParticipantCurrencyStateChange AS spcsc', 'spcsc.settlementParticipantCurrencyId', 'spc.settlementParticipantCurrencyId').callCount, 1)
@@ -881,7 +1133,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                         whereNotNull: sandbox.stub().returns({
                           whereNull: sandbox.stub().returns({
                             transacting: sandbox.stub().returns(
-                              Promise.resolve(stubData['settlementTransfersPrepare'].settlementTransferList)
+                              Promise.resolve(stubData.settlementTransfersPrepare.settlementTransferList)
                             )
                           })
                         })
@@ -926,7 +1178,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                         whereNotNull: sandbox.stub().returns({
                           whereNull: sandbox.stub().returns({
                             transacting: sandbox.stub().returns(
-                              Promise.resolve(stubData['settlementTransfersPrepare'].settlementTransferList)
+                              Promise.resolve(stubData.settlementTransfersPrepare.settlementTransferList)
                             )
                           })
                         })
@@ -941,7 +1193,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             })
           })
 
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub().returns({
               andOn: sandbox.stub().returns({
@@ -949,7 +1201,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
               })
             })
           })
-          let participantCurrencyJoinStub = sandbox.stub().callsArgOn(1, context)
+          const participantCurrencyJoinStub = sandbox.stub().callsArgOn(1, context)
           knexStub.withArgs('participantCurrency AS pc1').returns({
             join: participantCurrencyJoinStub.returns({
               select: sandbox.stub().returns({
@@ -964,7 +1216,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             })
           })
 
-          let result = await SettlementFacade.settlementTransfersPrepare(settlementId, transactionTimestamp, enums)
+          const result = await SettlementFacade.settlementTransfersPrepare(settlementId, transactionTimestamp, enums)
           test.equal(result, 0, 'Result for successful operation returned')
           test.end()
         } catch (err) {
@@ -995,7 +1247,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                         whereNotNull: sandbox.stub().returns({
                           whereNull: sandbox.stub().returns({
                             transacting: sandbox.stub().returns(
-                              Promise.resolve(stubData['settlementTransfersPrepare'].settlementTransferList)
+                              Promise.resolve(stubData.settlementTransfersPrepare.settlementTransferList)
                             )
                           })
                         })
@@ -1058,15 +1310,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const knexStub = sandbox.stub()
           knexStub.raw = sandbox.stub()
           sandbox.stub(Db, 'getKnex').returns(knexStub)
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               join: join2Stub.returns({
@@ -1080,7 +1332,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersReserve'].settlementTransferList
+                                    stubData.settlementTransfersReserve.settlementTransferList
                                   )
                                 )
                               })
@@ -1152,7 +1404,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
 
           sandbox.stub(Utility, 'produceGeneralMessage').returns()
 
-          let result = await SettlementFacade.settlementTransfersReserve(settlementId, transactionTimestamp, enums, trxStub)
+          const result = await SettlementFacade.settlementTransfersReserve(settlementId, transactionTimestamp, enums, trxStub)
           test.equal(result, 0, 'Result for successful operation returned')
           test.equal(knexStub.withArgs('settlementParticipantCurrency AS spc').callCount, 1)
           test.equal(knexStub.withArgs('transferStateChange').callCount, 3)
@@ -1179,15 +1431,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const knexStub = sandbox.stub()
           knexStub.raw = sandbox.stub()
           sandbox.stub(Db, 'getKnex').returns(knexStub)
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               join: join2Stub.returns({
@@ -1201,7 +1453,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersReserve'].settlementTransferList
+                                    stubData.settlementTransfersReserve.settlementTransferList
                                   )
                                 )
                               })
@@ -1294,15 +1546,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           trxStub.commit = sandbox.stub()
 
           knexStub.raw = sandbox.stub()
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               join: join2Stub.returns({
@@ -1316,7 +1568,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersReserve'].settlementTransferList
+                                    stubData.settlementTransfersReserve.settlementTransferList
                                   )
                                 )
                               })
@@ -1387,7 +1639,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
 
           sandbox.stub(Utility, 'produceGeneralMessage').returns()
 
-          let result = await SettlementFacade.settlementTransfersReserve(settlementId, transactionTimestamp, enums)
+          const result = await SettlementFacade.settlementTransfersReserve(settlementId, transactionTimestamp, enums)
           test.equal(result, 0, 'Result for successful operation returned')
           test.end()
         } catch (err) {
@@ -1409,15 +1661,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           trxStub.rollback = sandbox.stub()
 
           knexStub.raw = sandbox.stub()
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               join: join2Stub.returns({
@@ -1431,7 +1683,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersReserve'].settlementTransferList
+                                    stubData.settlementTransfersReserve.settlementTransferList
                                   )
                                 )
                               })
@@ -1534,15 +1786,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const knexStub = sandbox.stub()
           knexStub.raw = sandbox.stub()
           sandbox.stub(Db, 'getKnex').returns(knexStub)
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin2Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin2Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               leftJoin: sandbox.stub().returns({
@@ -1558,7 +1810,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                                   whereNull: sandbox.stub().returns({
                                     transacting: sandbox.stub().returns(
                                       Promise.resolve(
-                                        stubData['settlementTransfersAbort'].settlementTransferList
+                                        stubData.settlementTransfersAbort.settlementTransferList
                                       )
                                     )
                                   })
@@ -1633,7 +1885,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
 
           sandbox.stub(Utility, 'produceGeneralMessage').returns()
 
-          let result = await SettlementFacade.settlementTransfersAbort(settlementId, transactionTimestamp, enums, trxStub)
+          const result = await SettlementFacade.settlementTransfersAbort(settlementId, transactionTimestamp, enums, trxStub)
           test.equal(result, 0, 'Result for successful operation returned')
           test.equal(knexStub.withArgs('settlementParticipantCurrency AS spc').callCount, 1)
           test.equal(knexStub.withArgs('transferStateChange').callCount, 6)
@@ -1659,15 +1911,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const knexStub = sandbox.stub()
           knexStub.raw = sandbox.stub()
           sandbox.stub(Db, 'getKnex').returns(knexStub)
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               leftJoin: join2Stub.returns({
@@ -1681,7 +1933,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersAbort'].settlementTransferList
+                                    stubData.settlementTransfersAbort.settlementTransferList
                                   )
                                 )
                               })
@@ -1772,15 +2024,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           trxStub.commit = sandbox.stub()
 
           knexStub.raw = sandbox.stub()
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin2Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin2Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               leftJoin: sandbox.stub().returns({
@@ -1796,7 +2048,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                                   whereNull: sandbox.stub().returns({
                                     transacting: sandbox.stub().returns(
                                       Promise.resolve(
-                                        stubData['settlementTransfersAbort'].settlementTransferList
+                                        stubData.settlementTransfersAbort.settlementTransferList
                                       )
                                     )
                                   })
@@ -1870,7 +2122,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
 
           sandbox.stub(Utility, 'produceGeneralMessage').returns()
 
-          let result = await SettlementFacade.settlementTransfersAbort(settlementId, transactionTimestamp, enums)
+          const result = await SettlementFacade.settlementTransfersAbort(settlementId, transactionTimestamp, enums)
           test.equal(result, 0, 'Result for successful operation returned')
           test.end()
         } catch (err) {
@@ -1892,31 +2144,35 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           trxStub.rollback = sandbox.stub()
 
           knexStub.raw = sandbox.stub()
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin2Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
-              leftJoin: join2Stub.returns({
+              leftJoin: sandbox.stub().returns({
                 leftJoin: leftJoin1Stub.returns({
-                  join: join3Stub.returns({
-                    join: sandbox.stub().returns({
-                      join: sandbox.stub().returns({
-                        join: join4Stub.returns({
-                          select: sandbox.stub().returns({
-                            where: sandbox.stub().returns({
-                              whereNull: sandbox.stub().returns({
-                                transacting: sandbox.stub().returns(
-                                  Promise.resolve(
-                                    stubData['settlementTransfersAbort'].settlementTransferList
-                                  )
-                                )
+                  leftJoin: sandbox.stub().returns({
+                    leftJoin: leftJoin2Stub.returns({
+                      join: join2Stub.returns({
+                        join: sandbox.stub().returns({
+                          join: sandbox.stub().returns({
+                            join: join3Stub.returns({
+                              select: sandbox.stub().returns({
+                                where: sandbox.stub().returns({
+                                  whereNull: sandbox.stub().returns({
+                                    transacting: sandbox.stub().returns(
+                                      Promise.resolve(
+                                        stubData.settlementTransfersAbort.settlementTransferList
+                                      )
+                                    )
+                                  })
+                                })
                               })
                             })
                           })
@@ -1924,6 +2180,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                       })
                     })
                   })
+
                 })
               })
             }),
@@ -1979,6 +2236,110 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         }
       })
 
+      await settlementTransfersAbortTest.test('throw error and rollback when called from a transaction', async test => {
+        try {
+          const settlementId = 1
+          const transactionTimestamp = new Date().toISOString().replace(/[TZ]/g, ' ').trim()
+
+          const knexStub = sandbox.stub()
+          sandbox.stub(Db, 'getKnex').returns(knexStub)
+          const trxStub = sandbox.stub()
+          knexStub.transaction = sandbox.stub().callsArgWith(0, trxStub)
+          trxStub.rollback = sandbox.stub()
+
+          knexStub.raw = sandbox.stub()
+          const context = sandbox.stub()
+          context.on = sandbox.stub().returns({
+            andOn: sandbox.stub()
+          })
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin2Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          knexStub.returns({
+            join: join1Stub.returns({
+              leftJoin: sandbox.stub().returns({
+                leftJoin: leftJoin1Stub.returns({
+                  leftJoin: sandbox.stub().returns({
+                    leftJoin: leftJoin2Stub.returns({
+                      join: join2Stub.returns({
+                        join: sandbox.stub().returns({
+                          join: sandbox.stub().returns({
+                            join: join3Stub.returns({
+                              select: sandbox.stub().returns({
+                                where: sandbox.stub().returns({
+                                  whereNull: sandbox.stub().returns({
+                                    transacting: sandbox.stub().returns(
+                                      Promise.resolve(
+                                        stubData.settlementTransfersAbort.settlementTransferList
+                                      )
+                                    )
+                                  })
+                                })
+                              })
+                            })
+                          })
+                        })
+                      })
+                    })
+                  })
+
+                })
+              })
+            }),
+            insert: sandbox.stub().returns({
+              transacting: sandbox.stub().throws(new Error('Insert failed'))
+            })
+          })
+          knexStub.withArgs('participantPosition').returns({
+            select: sandbox.stub().returns({
+              where: sandbox.stub().returns({
+                first: sandbox.stub().returns({
+                  transacting: sandbox.stub().returns({
+                    forUpdate: sandbox.stub().returns(
+                      Promise.resolve({
+                        participantPositionId: 1,
+                        positionValue: 800,
+                        reservedValue: 0
+                      })
+                    )
+                  })
+                })
+              })
+            }),
+            update: sandbox.stub().returns({
+              where: sandbox.stub().returns({
+                transacting: sandbox.stub()
+              })
+            })
+          })
+          knexStub.withArgs('participantLimit').returns({
+            select: sandbox.stub().returns({
+              where: sandbox.stub().returns({
+                andWhere: sandbox.stub().returns({
+                  first: sandbox.stub().returns({
+                    transacting: sandbox.stub().returns({
+                      forUpdate: sandbox.stub().returns(
+                        Promise.resolve({ netDebitCap: 1000 })
+                      )
+                    })
+                  })
+                })
+              })
+            })
+          })
+
+          await SettlementFacade.settlementTransfersAbort(settlementId, transactionTimestamp, enums, trxStub)
+          test.fail('Error not thrown!')
+          test.end()
+        } catch (err) {
+          Logger.error(`settlementTransfersAbort failed with error - ${err}`)
+          test.pass('Error thrown')
+          test.end()
+        }
+      })
+
       await settlementTransfersAbortTest.end()
     } catch (err) {
       Logger.error(`settlementFacadeTest failed with error - ${err}`)
@@ -2017,15 +2378,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const knexStub = sandbox.stub()
           knexStub.raw = sandbox.stub()
           sandbox.stub(Db, 'getKnex').returns(knexStub)
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               join: join2Stub.returns({
@@ -2039,7 +2400,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersCommit'].settlementTransferList
+                                    stubData.settlementTransfersCommit.settlementTransferList
                                   )
                                 )
                               })
@@ -2096,7 +2457,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           ParticipantFacade.adjustLimits = sandbox.stub()
           sandbox.stub(Utility, 'produceGeneralMessage').returns()
 
-          let result = await SettlementFacade.settlementTransfersCommit(settlementId, transactionTimestamp, enums, trxStub)
+          const result = await SettlementFacade.settlementTransfersCommit(settlementId, transactionTimestamp, enums, trxStub)
           test.equal(result, 0, 'Result for successful operation returned')
           test.equal(knexStub.withArgs('settlementParticipantCurrency AS spc').callCount, 1)
           test.equal(knexStub.withArgs('participantPosition').callCount, 4)
@@ -2122,15 +2483,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const knexStub = sandbox.stub()
           knexStub.raw = sandbox.stub()
           sandbox.stub(Db, 'getKnex').returns(knexStub)
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               join: join2Stub.returns({
@@ -2144,7 +2505,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersCommit'].settlementTransferList
+                                    stubData.settlementTransfersCommit.settlementTransferList
                                   )
                                 )
                               })
@@ -2221,15 +2582,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           trxStub.commit = sandbox.stub()
 
           knexStub.raw = sandbox.stub()
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               join: join2Stub.returns({
@@ -2243,7 +2604,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersCommit'].settlementTransferList
+                                    stubData.settlementTransfersCommit.settlementTransferList
                                   )
                                 )
                               })
@@ -2300,7 +2661,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
 
           sandbox.stub(Utility, 'produceGeneralMessage').returns()
 
-          let result = await SettlementFacade.settlementTransfersCommit(settlementId, transactionTimestamp, enums)
+          const result = await SettlementFacade.settlementTransfersCommit(settlementId, transactionTimestamp, enums)
           test.equal(result, 0, 'Result for successful operation returned')
           test.end()
         } catch (err) {
@@ -2322,15 +2683,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           trxStub.rollback = sandbox.stub()
 
           knexStub.raw = sandbox.stub()
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub().returns({
             andOn: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context)
-          let join2Stub = sandbox.stub().callsArgOn(1, context)
-          let leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
-          let join3Stub = sandbox.stub().callsArgOn(1, context)
-          let join4Stub = sandbox.stub().callsArgOn(1, context)
+          const join1Stub = sandbox.stub().callsArgOn(1, context)
+          const join2Stub = sandbox.stub().callsArgOn(1, context)
+          const leftJoin1Stub = sandbox.stub().callsArgOn(1, context)
+          const join3Stub = sandbox.stub().callsArgOn(1, context)
+          const join4Stub = sandbox.stub().callsArgOn(1, context)
           knexStub.returns({
             join: join1Stub.returns({
               join: join2Stub.returns({
@@ -2344,7 +2705,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                               whereNull: sandbox.stub().returns({
                                 transacting: sandbox.stub().returns(
                                   Promise.resolve(
-                                    stubData['settlementTransfersCommit'].settlementTransferList
+                                    stubData.settlementTransfersCommit.settlementTransferList
                                   )
                                 )
                               })
@@ -2430,13 +2791,15 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           Db.getKnex.returns(knexStub)
           knexStub.returns({
             join: sandbox.stub().returns({
-              select: sandbox.stub().returns({
-                where: sandbox.stub().returns({
-                  first: sandbox.stub().returns({
-                    transacting: sandbox.stub().returns({
-                      forUpdate: sandbox.stub().returns(
-                        Promise.resolve(undefined)
-                      )
+              join: sandbox.stub().returns({
+                select: sandbox.stub().returns({
+                  where: sandbox.stub().returns({
+                    first: sandbox.stub().returns({
+                      transacting: sandbox.stub().returns({
+                        forUpdate: sandbox.stub().returns(
+                          Promise.resolve(undefined)
+                        )
+                      })
                     })
                   })
                 })
@@ -2444,13 +2807,13 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             })
           })
 
-          let result = await SettlementFacade.putById(1, payload['putById'][0], enums)
-          test.ok(result instanceof Error, 'Error is returned')
-          test.ok(result.isBoom, 'Error is boomified')
+          await SettlementFacade.putById(1, payload.putById[0], enums)
+          test.fail('Error not thrown!')
           test.end()
         } catch (err) {
+          test.ok(err instanceof FSPIOPError)
+          test.equal(err.message, 'Settlement not found', 'error message matched')
           Logger.error(`putById failed with error - ${err}`)
-          test.fail()
           test.end()
         }
       })
@@ -2466,23 +2829,19 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           Db.getKnex.returns(knexStub)
           knexStub.returns({
             join: sandbox.stub().returns({
-              select: sandbox.stub().returns({
-                where: sandbox.stub().returns({
-                  first: sandbox.stub().returns({
-                    transacting: sandbox.stub().returns({
-                      forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][0].settlementData)
-                      )
-                    })
-                  })
-                })
-              }),
               join: sandbox.stub().returns({
                 select: sandbox.stub().returns({
                   where: sandbox.stub().returns({
+                    first: sandbox.stub().returns({
+                      transacting: sandbox.stub().returns({
+                        forUpdate: sandbox.stub().returns(
+                          Promise.resolve(stubData.putById[0].settlementData)
+                        )
+                      })
+                    }),
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][0].windowsList)
+                        Promise.resolve(stubData.putById[0].windowsList)
                       )
                     })
                   })
@@ -2494,7 +2853,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                     whereNotNull: sandbox.stub().returns({
                       whereNull: sandbox.stub().returns({
                         transacting: sandbox.stub().returns(
-                          Promise.resolve(stubData['putById'][0].settlementTransferList)
+                          Promise.resolve(stubData.putById[0].settlementTransferList)
                         )
                       })
                     })
@@ -2508,7 +2867,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   where: sandbox.stub().returns({
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][0].settlementAccountList)
+                        Promise.resolve(stubData.putById[0].settlementAccountList)
                       )
                     })
                   })
@@ -2520,7 +2879,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                 where: sandbox.stub().returns({
                   transacting: sandbox.stub().returns({
                     forUpdate: sandbox.stub().returns(
-                      Promise.resolve(stubData['putById'][0].windowsAccountsList)
+                      Promise.resolve(stubData.putById[0].windowsAccountsList)
                     )
                   })
                 })
@@ -2537,36 +2896,53 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   Promise.resolve()
                 )
               })
+            }),
+            transacting: sandbox.stub().returns({
+              join: sandbox.stub().returns({
+                join: sandbox.stub().returns({
+                  join: sandbox.stub().returns({
+                    join: sandbox.stub().returns({
+                      join: sandbox.stub().returns({
+                        whereIn: sandbox.stub().returns({
+                          where: sandbox.stub().returns({
+                            distinct: sandbox.stub().returns({
+                              orderBy: sandbox.stub().returns(stubData.putById[0].processedContent)
+                            })
+                          })
+                        })
+                      })
+                    })
+                  })
+                })
+              })
             })
           })
           SettlementFacade.settlementTransfersPrepare = sandbox.stub()
           SettlementFacade.settlementTransfersReserve = sandbox.stub()
           SettlementFacade.settlementTransfersCommit = sandbox.stub()
 
-          let result = await SettlementFacade.putById(1, payload['putById'][0], enums)
+          const result = await SettlementFacade.putById(1, payload.putById[0], enums)
           test.ok(result, 'Result returned')
-          test.equal(knexStub.callCount, 10, 'Knex called 10 times')
+          test.equal(knexStub.callCount, 9, 'Knex called 9 times')
           test.equal(result.state, 'PENDING_SETTLEMENT', 'Settlement should remain in PENDING_SETTLEMENT state')
           test.equal(result.settlementWindows.length, 2, 'Exactly two settlement windows are expected to be affected')
-          test.equal(result.settlementWindows[0].settlementWindowStateId, 'PENDING_SETTLEMENT', 'First window is PENDING_SETTLEMENT')
-          test.equal(result.settlementWindows[1].settlementWindowStateId, 'ABORTED', 'Second window is ABORTED')
           test.equal(result.participants.length, 2, 'Two participants are affected')
           test.equal(result.participants[0].accounts.length, 6, 'Six accounts for first participant are affected')
           test.equal(result.participants[1].accounts.length, 1, 'One account for second participant is affected')
           test.equal(result.participants[0].accounts[0].id, 11, 'First account processed has id 11')
-          test.equal(result.participants[0].accounts[0].errorInformation.errorDescription, 'Account not found', 'First account returns error "Account not found"')
+          test.equal(result.participants[0].accounts[0].errorInformation.errorDescription, 'Generic client error - Account not found', 'First account returns error "Account not found"')
           test.equal(result.participants[0].accounts[1].id, 1, 'Second account processed has id 1')
           test.equal(result.participants[0].accounts[1].state, 'PS_TRANSFERS_RECORDED', 'Second account is PS_TRANSFERS_RECORDED')
           test.equal(result.participants[0].accounts[2].id, 2, 'Third account processed has id 2')
           test.equal(result.participants[0].accounts[2].state, 'PS_TRANSFERS_RECORDED', 'Third account is PS_TRANSFERS_RECORDED')
           test.equal(result.participants[0].accounts[3].id, 1, 'Fourth account processed has id 1')
-          test.equal(result.participants[0].accounts[3].errorInformation.errorDescription, 'Account already processed once', 'Fourth account returns error "Account already processed once"')
+          test.equal(result.participants[0].accounts[3].errorInformation.errorDescription, 'Generic client error - Account already processed once', 'Fourth account returns error "Account already processed once"')
           test.equal(result.participants[0].accounts[4].id, 3, 'Fifth account processed has id 3')
           test.equal(result.participants[0].accounts[4].state, 'SETTLED', 'Fifth account state remains SETTLED')
           test.equal(result.participants[0].accounts[5].id, 4, 'Sixth account processed has id 4')
-          test.equal(result.participants[0].accounts[5].errorInformation.errorDescription, 'State change not allowed', 'Fourth account returns error "State change not allowed"')
+          test.equal(result.participants[0].accounts[5].errorInformation.errorDescription, 'Generic client error - State change not allowed', 'Fourth account returns error "State change not allowed"')
           test.equal(result.participants[1].accounts[0].id, 5, 'First account processed for second participant has id 5')
-          test.equal(result.participants[1].accounts[0].errorInformation.errorDescription, 'Participant and account mismatch', 'First account processed for second participant "Participant and account mismatch"')
+          test.equal(result.participants[1].accounts[0].errorInformation.errorDescription, 'Generic client error - Participant and account mismatch', 'First account processed for second participant "Participant and account mismatch"')
           test.end()
         } catch (err) {
           Logger.error(`putById failed with error - ${err}`)
@@ -2586,23 +2962,19 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           Db.getKnex.returns(knexStub)
           knexStub.returns({
             join: sandbox.stub().returns({
-              select: sandbox.stub().returns({
-                where: sandbox.stub().returns({
-                  first: sandbox.stub().returns({
-                    transacting: sandbox.stub().returns({
-                      forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][1].settlementData)
-                      )
-                    })
-                  })
-                })
-              }),
               join: sandbox.stub().returns({
                 select: sandbox.stub().returns({
                   where: sandbox.stub().returns({
+                    first: sandbox.stub().returns({
+                      transacting: sandbox.stub().returns({
+                        forUpdate: sandbox.stub().returns(
+                          Promise.resolve(stubData.putById[1].settlementData)
+                        )
+                      })
+                    }),
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][1].windowsList)
+                        Promise.resolve(stubData.putById[1].windowsList)
                       )
                     })
                   })
@@ -2614,7 +2986,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                     whereNotNull: sandbox.stub().returns({
                       whereNull: sandbox.stub().returns({
                         transacting: sandbox.stub().returns(
-                          Promise.resolve(stubData['putById'][1].settlementTransferList)
+                          Promise.resolve(stubData.putById[1].settlementTransferList)
                         )
                       })
                     })
@@ -2628,7 +3000,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   where: sandbox.stub().returns({
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][1].settlementAccountList)
+                        Promise.resolve(stubData.putById[1].settlementAccountList)
                       )
                     })
                   })
@@ -2640,7 +3012,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                 where: sandbox.stub().returns({
                   transacting: sandbox.stub().returns({
                     forUpdate: sandbox.stub().returns(
-                      Promise.resolve(stubData['putById'][1].windowsAccountsList)
+                      Promise.resolve(stubData.putById[1].windowsAccountsList)
                     )
                   })
                 })
@@ -2657,13 +3029,32 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   Promise.resolve()
                 )
               })
+            }),
+            transacting: sandbox.stub().returns({
+              join: sandbox.stub().returns({
+                join: sandbox.stub().returns({
+                  join: sandbox.stub().returns({
+                    join: sandbox.stub().returns({
+                      join: sandbox.stub().returns({
+                        whereIn: sandbox.stub().returns({
+                          where: sandbox.stub().returns({
+                            distinct: sandbox.stub().returns({
+                              orderBy: sandbox.stub().returns(stubData.putById[1].processedContent)
+                            })
+                          })
+                        })
+                      })
+                    })
+                  })
+                })
+              })
             })
           })
           SettlementFacade.settlementTransfersPrepare = sandbox.stub()
           SettlementFacade.settlementTransfersReserve = sandbox.stub()
           SettlementFacade.settlementTransfersCommit = sandbox.stub()
 
-          let result = await SettlementFacade.putById(1, payload['putById'][1], enums)
+          const result = await SettlementFacade.putById(1, payload.putById[1], enums)
           test.ok(result, 'Result returned')
           test.end()
         } catch (err) {
@@ -2684,23 +3075,19 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           Db.getKnex.returns(knexStub)
           knexStub.returns({
             join: sandbox.stub().returns({
-              select: sandbox.stub().returns({
-                where: sandbox.stub().returns({
-                  first: sandbox.stub().returns({
-                    transacting: sandbox.stub().returns({
-                      forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][2].settlementData)
-                      )
-                    })
-                  })
-                })
-              }),
               join: sandbox.stub().returns({
                 select: sandbox.stub().returns({
                   where: sandbox.stub().returns({
+                    first: sandbox.stub().returns({
+                      transacting: sandbox.stub().returns({
+                        forUpdate: sandbox.stub().returns(
+                          Promise.resolve(stubData.putById[2].settlementData)
+                        )
+                      })
+                    }),
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][2].windowsList)
+                        Promise.resolve(stubData.putById[2].windowsList)
                       )
                     })
                   })
@@ -2712,7 +3099,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                     whereNotNull: sandbox.stub().returns({
                       whereNull: sandbox.stub().returns({
                         transacting: sandbox.stub().returns(
-                          Promise.resolve(stubData['putById'][2].settlementTransferList)
+                          Promise.resolve(stubData.putById[2].settlementTransferList)
                         )
                       })
                     })
@@ -2726,7 +3113,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   where: sandbox.stub().returns({
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][2].settlementAccountList)
+                        Promise.resolve(stubData.putById[2].settlementAccountList)
                       )
                     })
                   })
@@ -2738,7 +3125,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                 where: sandbox.stub().returns({
                   transacting: sandbox.stub().returns({
                     forUpdate: sandbox.stub().returns(
-                      Promise.resolve(stubData['putById'][2].windowsAccountsList)
+                      Promise.resolve(stubData.putById[2].windowsAccountsList)
                     )
                   })
                 })
@@ -2755,13 +3142,32 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   Promise.resolve()
                 )
               })
+            }),
+            transacting: sandbox.stub().returns({
+              join: sandbox.stub().returns({
+                join: sandbox.stub().returns({
+                  join: sandbox.stub().returns({
+                    join: sandbox.stub().returns({
+                      join: sandbox.stub().returns({
+                        whereIn: sandbox.stub().returns({
+                          where: sandbox.stub().returns({
+                            distinct: sandbox.stub().returns({
+                              orderBy: sandbox.stub().returns(stubData.putById[2].processedContent)
+                            })
+                          })
+                        })
+                      })
+                    })
+                  })
+                })
+              })
             })
           })
           SettlementFacade.settlementTransfersPrepare = sandbox.stub()
           SettlementFacade.settlementTransfersReserve = sandbox.stub()
           SettlementFacade.settlementTransfersCommit = sandbox.stub()
 
-          let result = await SettlementFacade.putById(1, payload['putById'][2], enums)
+          const result = await SettlementFacade.putById(1, payload.putById[2], enums)
           test.ok(result, 'Result returned')
           test.end()
         } catch (err) {
@@ -2782,23 +3188,19 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           Db.getKnex.returns(knexStub)
           knexStub.returns({
             join: sandbox.stub().returns({
-              select: sandbox.stub().returns({
-                where: sandbox.stub().returns({
-                  first: sandbox.stub().returns({
-                    transacting: sandbox.stub().returns({
-                      forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][3].settlementData)
-                      )
-                    })
-                  })
-                })
-              }),
               join: sandbox.stub().returns({
                 select: sandbox.stub().returns({
                   where: sandbox.stub().returns({
+                    first: sandbox.stub().returns({
+                      transacting: sandbox.stub().returns({
+                        forUpdate: sandbox.stub().returns(
+                          Promise.resolve(stubData.putById[3].settlementData)
+                        )
+                      })
+                    }),
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][3].windowsList)
+                        Promise.resolve(stubData.putById[3].windowsList)
                       )
                     })
                   })
@@ -2810,7 +3212,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                     whereNotNull: sandbox.stub().returns({
                       whereNull: sandbox.stub().returns({
                         transacting: sandbox.stub().returns(
-                          Promise.resolve(stubData['putById'][3].settlementTransferList)
+                          Promise.resolve(stubData.putById[3].settlementTransferList)
                         )
                       })
                     })
@@ -2824,7 +3226,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   where: sandbox.stub().returns({
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][3].settlementAccountList)
+                        Promise.resolve(stubData.putById[3].settlementAccountList)
                       )
                     })
                   })
@@ -2836,7 +3238,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                 where: sandbox.stub().returns({
                   transacting: sandbox.stub().returns({
                     forUpdate: sandbox.stub().returns(
-                      Promise.resolve(stubData['putById'][3].windowsAccountsList)
+                      Promise.resolve(stubData.putById[3].windowsAccountsList)
                     )
                   })
                 })
@@ -2853,13 +3255,57 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   Promise.resolve()
                 )
               })
+            }),
+            transacting: sandbox.stub().returns({
+              join: sandbox.stub().returns({
+                join: sandbox.stub().returns({
+                  join: sandbox.stub().returns({
+                    join: sandbox.stub().returns({
+                      join: sandbox.stub().returns({
+                        whereIn: sandbox.stub().returns({
+                          where: sandbox.stub().returns({
+                            distinct: sandbox.stub().returns({
+                              orderBy: sandbox.stub().returns(stubData.putById[3].processedContent)
+                            })
+                          })
+                        })
+                      })
+                    })
+                  })
+                }),
+                whereIn: sandbox.stub().returns({
+                  whereNot: sandbox.stub().returns({
+                    distinct: sandbox.stub().returns(stubData.putById[3].unsettledWindows)
+                  })
+                })
+              }),
+              where: sandbox.stub().returns({
+                whereIn: sandbox.stub().returns({
+                  update: sandbox.stub(),
+                  distinct: sandbox.stub().returns(stubData.putById[3].scaContentToCheck)
+                }),
+                update: sandbox.stub().returns({
+                  transacting: sandbox.stub().returns(
+                    Promise.resolve()
+                  )
+                })
+              }),
+              whereIn: sandbox.stub().returns({
+                whereNot: sandbox.stub().returns({
+                  distinct: sandbox.stub().returns(stubData.putById[3].unsettledContent)
+                }),
+                distinct: sandbox.stub().returns(stubData.putById[3].windowsToCheck)
+              }),
+              insert: sandbox.stub().returns(
+                Promise.resolve([21, 22, 23])
+              )
             })
           })
           SettlementFacade.settlementTransfersPrepare = sandbox.stub()
           SettlementFacade.settlementTransfersReserve = sandbox.stub()
           SettlementFacade.settlementTransfersCommit = sandbox.stub()
 
-          let result = await SettlementFacade.putById(1, payload['putById'][3], enums)
+          const result = await SettlementFacade.putById(1, payload.putById[3], enums)
           test.ok(result, 'Result returned')
           test.end()
         } catch (err) {
@@ -2880,23 +3326,19 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           Db.getKnex.returns(knexStub)
           knexStub.returns({
             join: sandbox.stub().returns({
-              select: sandbox.stub().returns({
-                where: sandbox.stub().returns({
-                  first: sandbox.stub().returns({
-                    transacting: sandbox.stub().returns({
-                      forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][4].settlementData)
-                      )
-                    })
-                  })
-                })
-              }),
               join: sandbox.stub().returns({
                 select: sandbox.stub().returns({
                   where: sandbox.stub().returns({
+                    first: sandbox.stub().returns({
+                      transacting: sandbox.stub().returns({
+                        forUpdate: sandbox.stub().returns(
+                          Promise.resolve(stubData.putById[4].settlementData)
+                        )
+                      })
+                    }),
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][4].windowsList)
+                        Promise.resolve(stubData.putById[4].windowsList)
                       )
                     })
                   })
@@ -2908,7 +3350,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                     whereNotNull: sandbox.stub().returns({
                       whereNull: sandbox.stub().returns({
                         transacting: sandbox.stub().returns(
-                          Promise.resolve(stubData['putById'][4].settlementTransferList)
+                          Promise.resolve(stubData.putById[4].settlementTransferList)
                         )
                       })
                     })
@@ -2922,7 +3364,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   where: sandbox.stub().returns({
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][4].settlementAccountList)
+                        Promise.resolve(stubData.putById[4].settlementAccountList)
                       )
                     })
                   })
@@ -2934,7 +3376,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                 where: sandbox.stub().returns({
                   transacting: sandbox.stub().returns({
                     forUpdate: sandbox.stub().returns(
-                      Promise.resolve(stubData['putById'][4].windowsAccountsList)
+                      Promise.resolve(stubData.putById[4].windowsAccountsList)
                     )
                   })
                 })
@@ -2951,13 +3393,32 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   Promise.resolve()
                 )
               })
+            }),
+            transacting: sandbox.stub().returns({
+              join: sandbox.stub().returns({
+                join: sandbox.stub().returns({
+                  join: sandbox.stub().returns({
+                    join: sandbox.stub().returns({
+                      join: sandbox.stub().returns({
+                        whereIn: sandbox.stub().returns({
+                          where: sandbox.stub().returns({
+                            distinct: sandbox.stub().returns({
+                              orderBy: sandbox.stub().returns(stubData.putById[4].processedContent)
+                            })
+                          })
+                        })
+                      })
+                    })
+                  })
+                })
+              })
             })
           })
           SettlementFacade.settlementTransfersPrepare = sandbox.stub()
           SettlementFacade.settlementTransfersReserve = sandbox.stub()
           SettlementFacade.settlementTransfersCommit = sandbox.stub()
 
-          let result = await SettlementFacade.putById(1, payload['putById'][4], enums)
+          const result = await SettlementFacade.putById(1, payload.putById[4], enums)
           test.ok(result, 'Result returned')
           test.end()
         } catch (err) {
@@ -2978,23 +3439,19 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           Db.getKnex.returns(knexStub)
           knexStub.returns({
             join: sandbox.stub().returns({
-              select: sandbox.stub().returns({
-                where: sandbox.stub().returns({
-                  first: sandbox.stub().returns({
-                    transacting: sandbox.stub().returns({
-                      forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][5].settlementData)
-                      )
-                    })
-                  })
-                })
-              }),
               join: sandbox.stub().returns({
                 select: sandbox.stub().returns({
                   where: sandbox.stub().returns({
+                    first: sandbox.stub().returns({
+                      transacting: sandbox.stub().returns({
+                        forUpdate: sandbox.stub().returns(
+                          Promise.resolve(stubData.putById[5].settlementData)
+                        )
+                      })
+                    }),
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][5].windowsList)
+                        Promise.resolve(stubData.putById[5].windowsList)
                       )
                     })
                   })
@@ -3006,7 +3463,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                     whereNotNull: sandbox.stub().returns({
                       whereNull: sandbox.stub().returns({
                         transacting: sandbox.stub().returns(
-                          Promise.resolve(stubData['putById'][5].settlementTransferList)
+                          Promise.resolve(stubData.putById[5].settlementTransferList)
                         )
                       })
                     })
@@ -3020,7 +3477,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   where: sandbox.stub().returns({
                     transacting: sandbox.stub().returns({
                       forUpdate: sandbox.stub().returns(
-                        Promise.resolve(stubData['putById'][5].settlementAccountList)
+                        Promise.resolve(stubData.putById[5].settlementAccountList)
                       )
                     })
                   })
@@ -3032,7 +3489,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                 where: sandbox.stub().returns({
                   transacting: sandbox.stub().returns({
                     forUpdate: sandbox.stub().returns(
-                      Promise.resolve(stubData['putById'][5].windowsAccountsList)
+                      Promise.resolve(stubData.putById[5].windowsAccountsList)
                     )
                   })
                 })
@@ -3049,13 +3506,57 @@ Test('Settlement facade', async (settlementFacadeTest) => {
                   Promise.resolve()
                 )
               })
+            }),
+            transacting: sandbox.stub().returns({
+              join: sandbox.stub().returns({
+                join: sandbox.stub().returns({
+                  join: sandbox.stub().returns({
+                    join: sandbox.stub().returns({
+                      join: sandbox.stub().returns({
+                        whereIn: sandbox.stub().returns({
+                          where: sandbox.stub().returns({
+                            distinct: sandbox.stub().returns({
+                              orderBy: sandbox.stub().returns(stubData.putById[3].processedContent)
+                            })
+                          })
+                        })
+                      })
+                    })
+                  })
+                }),
+                whereIn: sandbox.stub().returns({
+                  whereNot: sandbox.stub().returns({
+                    distinct: sandbox.stub().returns(stubData.putById[3].unsettledWindows)
+                  })
+                })
+              }),
+              where: sandbox.stub().returns({
+                whereIn: sandbox.stub().returns({
+                  update: sandbox.stub(),
+                  distinct: sandbox.stub().returns(stubData.putById[3].scaContentToCheck)
+                }),
+                update: sandbox.stub().returns({
+                  transacting: sandbox.stub().returns(
+                    Promise.resolve()
+                  )
+                })
+              }),
+              whereIn: sandbox.stub().returns({
+                whereNot: sandbox.stub().returns({
+                  distinct: sandbox.stub().returns(stubData.putById[3].unsettledContent)
+                }),
+                distinct: sandbox.stub().returns(stubData.putById[3].windowsToCheck)
+              }),
+              insert: sandbox.stub().returns(
+                Promise.resolve([21, 22, 23])
+              )
             })
           })
           SettlementFacade.settlementTransfersPrepare = sandbox.stub()
           SettlementFacade.settlementTransfersReserve = sandbox.stub()
           SettlementFacade.settlementTransfersCommit = sandbox.stub()
 
-          let result = await SettlementFacade.putById(1, payload['putById'][5], enums)
+          const result = await SettlementFacade.putById(1, payload.putById[5], enums)
           test.ok(result, 'Result returned')
           test.end()
         } catch (err) {
@@ -3090,7 +3591,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             })
           })
 
-          await SettlementFacade.putById(1, payload['putById'][0], enums)
+          await SettlementFacade.putById(1, payload.putById[0], enums)
           test.fail('Error is not thrown!')
           test.end()
         } catch (err) {
@@ -3110,6 +3611,28 @@ Test('Settlement facade', async (settlementFacadeTest) => {
 
   await settlementFacadeTest.test('abortById should', async abortByIdTest => {
     try {
+      await abortByIdTest.test('throw error if settlement not found', async test => {
+        try {
+          const settlementId = 1
+          const settlementResultStub = null
+
+          sandbox.stub(Db, 'getKnex')
+          const knexStub = sandbox.stub()
+
+          Db.getKnex.returns(knexStub)
+          sandbox.stub(SettlementFacade, 'getById')
+          SettlementFacade.getById.returns(settlementResultStub)
+
+          await SettlementFacade.abortById({ settlementId }, {}, enums)
+          test.fail('Error not thrown!')
+          test.end()
+        } catch (err) {
+          Logger.error(`abortById failed with error - ${err}`)
+          test.ok('Error thrown')
+          test.end()
+        }
+      })
+
       await abortByIdTest.test('throw error if state change is not allowed - PS_TRANSFERS_COMMITTED', async test => {
         try {
           const settlementId = 1
@@ -3204,7 +3727,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             })
           })
 
-          let result = await SettlementFacade.abortById(settlementId, payload, enums)
+          const result = await SettlementFacade.abortById(settlementId, payload, enums)
           test.deepEqual(result, resultMock)
           test.end()
         } catch (err) {
@@ -3328,7 +3851,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           knexStub.transaction = sandbox.stub().callsArgWith(0, trxStub)
           sandbox.stub(SettlementFacade, 'settlementTransfersAbort')
 
-          let result = await SettlementFacade.abortById(settlementId, payload, enums)
+          const result = await SettlementFacade.abortById(settlementId, payload, enums)
           test.deepEqual(result, resultMock)
           test.end()
         } catch (err) {
@@ -3438,12 +3961,12 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const settlementResultStub = { id: 1 }
 
           Db.settlement = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlement.query.callsArgWith(0, builderStub)
           builderStub.join = sandbox.stub()
-          let selectStub = sandbox.stub()
-          let whereStub = sandbox.stub()
-          let firstStub = sandbox.stub()
+          const selectStub = sandbox.stub()
+          const whereStub = sandbox.stub()
+          const firstStub = sandbox.stub()
           builderStub.join.returns({
             select: selectStub.returns({
               where: whereStub.returns({
@@ -3471,7 +3994,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const settlementId = 1
           Db.settlement = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlement.query.callsArgWith(0, builderStub)
           await SettlementFacade.getById({ settlementId })
           test.fail('Error not thrown!')
@@ -3495,37 +4018,33 @@ Test('Settlement facade', async (settlementFacadeTest) => {
     try {
       await getByParamsTest.test('retrieve settlement data by params', async test => {
         try {
-          let state = 'PENDING_SETTLEMENT'
-          let fromDateTime = new Date() - 3600
-          let toDateTime = new Date()
-          let currency = 'USD'
-          let settlementWindowId = 1
-          let fromSettlementWindowDateTime = new Date() - 3600
-          let toSettlementWindowDateTime = new Date()
-          let participantId = 1
-          let accountId = 1
-          let query = { state, fromDateTime, toDateTime, currency, settlementWindowId, fromSettlementWindowDateTime, toSettlementWindowDateTime, participantId, accountId }
+          const state = 'PENDING_SETTLEMENT'
+          const fromDateTime = new Date() - 3600
+          const toDateTime = new Date()
+          const currency = 'USD'
+          const settlementWindowId = 1
+          const fromSettlementWindowDateTime = new Date() - 3600
+          const toSettlementWindowDateTime = new Date()
+          const participantId = 1
+          const accountId = 1
+          const query = { state, fromDateTime, toDateTime, currency, settlementWindowId, fromSettlementWindowDateTime, toSettlementWindowDateTime, participantId, accountId }
 
           Db.settlement = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlement.query.callsArgWith(0, builderStub)
           builderStub.innerJoin = sandbox.stub()
-          let context = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub()
           context.on.returns({
             andOn: sandbox.stub()
           })
-          let innerJoin5 = sandbox.stub()
-          innerJoin5.callsArgOn(1, context)
-          let innerJoin6 = sandbox.stub()
-          innerJoin6.callsArgOn(1, context)
 
           builderStub.innerJoin.returns({
             innerJoin: sandbox.stub().returns({
               innerJoin: sandbox.stub().returns({
                 innerJoin: sandbox.stub().returns({
-                  innerJoin: innerJoin5.returns({
-                    innerJoin: innerJoin6.returns({
+                  innerJoin: sandbox.stub().returns({
+                    innerJoin: sandbox.stub().returns({
                       innerJoin: sandbox.stub().returns({
                         innerJoin: sandbox.stub().returns({
                           distinct: sandbox.stub().returns({
@@ -3560,7 +4079,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const settlementWindowId = 1
           Db.settlement = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlement.query.callsArgWith(0, builderStub)
           await SettlementFacade.getByParams({ settlementWindowId })
           test.fail('Error not thrown!')
@@ -3580,10 +4099,11 @@ Test('Settlement facade', async (settlementFacadeTest) => {
     }
   })
 
-  await settlementFacadeTest.test('knexTriggerEvent should', async knexTriggerEventTest => {
+  await settlementFacadeTest.test('triggerSettlementEvent should', async triggerSettlementEventTest => {
     try {
-      await knexTriggerEventTest.test('create new settlement', async test => {
+      await triggerSettlementEventTest.test('create new settlement', async test => {
         try {
+          const insertedSettlementId = 1
           sandbox.stub(Db, 'getKnex')
           const knexStub = sandbox.stub()
           const trxStub = sandbox.stub()
@@ -3593,18 +4113,18 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           knexStub.returns({
             insert: sandbox.stub().returns({
               transacting: sandbox.stub().returns(
-                Promise.resolve(stubData['knexTriggerEvent'].settlementId)
+                Promise.resolve(stubData.triggerSettlementEvent.settlementId)
               )
             }),
             select: sandbox.stub().returns({
               where: sandbox.stub().returns({
                 transacting: sandbox.stub().returns(
-                  Promise.resolve(stubData['knexTriggerEvent'].settlementParticipantCurrencyList)
+                  Promise.resolve(stubData.triggerSettlementEvent.settlementParticipantCurrencyList)
                 )
               }),
               whereIn: sandbox.stub().returns({
                 transacting: sandbox.stub().returns(
-                  Promise.resolve(stubData['knexTriggerEvent'].settlementParticipantCurrencyStateChangeIdList)
+                  Promise.resolve(stubData.triggerSettlementEvent.settlementParticipantCurrencyStateChangeIdList)
                 )
               })
             }),
@@ -3615,26 +4135,51 @@ Test('Settlement facade', async (settlementFacadeTest) => {
               select: sandbox.stub().returns({
                 whereIn: sandbox.stub().returns({
                   andWhere: sandbox.stub().returns(
-                    Promise.resolve(stubData['knexTriggerEvent'].settlementWindowStateChangeIdList)
+                    Promise.resolve(stubData.triggerSettlementEvent.settlementWindowStateChangeIdList)
                   )
                 })
               }),
-              insert: sandbox.stub()
+              insert: sandbox.stub().returns(insertedSettlementId),
+              join: sandbox.stub().returns({
+                join: sandbox.stub().returns({
+                  join: sandbox.stub().returns({
+                    whereRaw: sandbox.stub().returns({
+                      where: sandbox.stub().returns({
+                        where: sandbox.stub().returns({
+                          whereIn: sandbox.stub().returns({
+                            whereIn: sandbox.stub().returns({
+                              distinct: sandbox.stub().returns(stubData.triggerSettlementEvent.swcIdList)
+                            })
+                          })
+                        })
+                      })
+                    })
+                  })
+                }),
+                whereIn: sandbox.stub().returns({
+                  whereIn: sandbox.stub().returns({
+                    select: sandbox.stub().returns(stubData.triggerSettlementEvent.windowsStateToBeUpdatedIdList)
+                  })
+                })
+              }),
+              whereIn: sandbox.stub().returns({
+                update: sandbox.stub()
+              })
             })
           })
           knexStub.batchInsert = sandbox.stub().returns({
             transacting: sandbox.stub()
           })
           knexStub.raw = sandbox.stub()
-          let context1 = sandbox.stub()
-          let context2 = sandbox.stub()
-          let context3 = sandbox.stub()
+          const context1 = sandbox.stub()
+          const context2 = sandbox.stub()
+          const context3 = sandbox.stub()
           context2.on = sandbox.stub().returns({
             on: sandbox.stub()
           })
-          let join1Stub = sandbox.stub().callsArgOn(1, context2)
+          const join1Stub = sandbox.stub().callsArgOn(1, context2)
           context3.on = sandbox.stub()
-          let join2Stub = sandbox.stub().callsArgOn(1, context3)
+          const join2Stub = sandbox.stub().callsArgOn(1, context3)
           context1.from = sandbox.stub().returns({
             join: sandbox.stub().returns({
               join: join1Stub.returns({
@@ -3657,25 +4202,26 @@ Test('Settlement facade', async (settlementFacadeTest) => {
               })
             })
           })
-          let insertStub = sandbox.stub().callsArgOn(0, context1)
+          const insertStub = sandbox.stub().callsArgOn(0, context1)
           knexStub.from = sandbox.stub().returns({
             insert: insertStub.returns({
               transacting: sandbox.stub()
             })
           })
+          const settlementModel = 'DEFERRED_NET'
 
-          let settlementId = await SettlementFacade.knexTriggerEvent(payload['knexTriggerEvent'], enums)
-          test.equal(settlementId, 1, 'settlementId returned')
-          test.equal(knexStub.callCount, 10, 'Knex called 10 times')
+          const settlementId = await SettlementFacade.triggerSettlementEvent(payload.triggerSettlementEvent, settlementModel, enums)
+          test.equal(settlementId, insertedSettlementId, 'settlementId returned')
+          test.equal(knexStub.callCount, 14, 'Knex called 14 times')
           test.end()
         } catch (err) {
-          Logger.error(`knexTriggerEvent failed with error - ${err}`)
+          Logger.error(`triggerSettlementEvent failed with error - ${err}`)
           test.fail()
           test.end()
         }
       })
 
-      await knexTriggerEventTest.test('throw error if settlement insert fails', async test => {
+      await triggerSettlementEventTest.test('throw error if settlement insert fails', async test => {
         try {
           sandbox.stub(Db, 'getKnex')
           const knexStub = sandbox.stub()
@@ -3691,21 +4237,21 @@ Test('Settlement facade', async (settlementFacadeTest) => {
             })
           })
 
-          await SettlementFacade.knexTriggerEvent(payload['knexTriggerEvent'])
+          await SettlementFacade.triggerSettlementEvent(payload.triggerSettlementEvent)
           test.fail('Error not thrown!')
           test.end()
         } catch (err) {
-          Logger.error(`knexTriggerEvent failed with error - ${err}`)
+          Logger.error(`triggerSettlementEvent failed with error - ${err}`)
           test.pass('Error thrown')
           test.end()
         }
       })
 
-      await knexTriggerEventTest.end()
+      await triggerSettlementEventTest.end()
     } catch (err) {
       Logger.error(`settlementFacadeTest failed with error - ${err}`)
-      knexTriggerEventTest.fail()
-      knexTriggerEventTest.end()
+      triggerSettlementEventTest.fail()
+      triggerSettlementEventTest.end()
     }
   })
 
@@ -3715,12 +4261,12 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const listOfIds = [1]
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           builderStub.leftJoin = sandbox.stub()
-          let leftJoin2Stub = sandbox.stub()
-          let selectStub = sandbox.stub()
-          let whereInStub = sandbox.stub()
+          const leftJoin2Stub = sandbox.stub()
+          const selectStub = sandbox.stub()
+          const whereInStub = sandbox.stub()
           builderStub.leftJoin.returns({
             leftJoin: leftJoin2Stub.returns({
               select: selectStub.returns({
@@ -3748,7 +4294,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const listOfIds = [1]
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           await SettlementFacade.settlementParticipantCurrency.getByListOfIds(listOfIds)
           test.fail('Error not thrown!')
@@ -3774,12 +4320,12 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const params = { settlementId: 1, participantId: 1 }
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           builderStub.join = sandbox.stub()
-          let selectStub = sandbox.stub()
-          let whereStub = sandbox.stub()
-          let andWhereStub = sandbox.stub()
+          const selectStub = sandbox.stub()
+          const whereStub = sandbox.stub()
+          const andWhereStub = sandbox.stub()
           builderStub.join.returns({
             select: selectStub.returns({
               where: whereStub.returns({
@@ -3804,7 +4350,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const params = { settlementId: 1, participantId: 1 }
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           await SettlementFacade.settlementParticipantCurrency.getAccountsInSettlementByIds(params)
           test.fail('Error not thrown!')
@@ -3830,12 +4376,12 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const params = { settlementId: 1 }
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           builderStub.leftJoin = sandbox.stub()
-          let joinStub = sandbox.stub()
-          let selectStub = sandbox.stub()
-          let whereStub = sandbox.stub()
+          const joinStub = sandbox.stub()
+          const selectStub = sandbox.stub()
+          const whereStub = sandbox.stub()
           builderStub.leftJoin.returns({
             join: joinStub.returns({
               select: selectStub.returns({
@@ -3866,7 +4412,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const params = { settlementId: 1 }
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           await SettlementFacade.settlementParticipantCurrency.getParticipantCurrencyBySettlementId(params)
           test.fail('Error not thrown!')
@@ -3892,12 +4438,12 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const settlementParticipantCurrencyId = 1
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           builderStub.join = sandbox.stub()
-          let joinStub = sandbox.stub()
-          let selectStub = sandbox.stub()
-          let whereStub = sandbox.stub()
+          const joinStub = sandbox.stub()
+          const selectStub = sandbox.stub()
+          const whereStub = sandbox.stub()
           builderStub.join.returns({
             join: joinStub.returns({
               select: selectStub.returns({
@@ -3928,7 +4474,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const params = { settlementId: 1 }
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           await SettlementFacade.settlementParticipantCurrency.getSettlementAccountById(params)
           test.fail('Error not thrown!')
@@ -3954,12 +4500,12 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const settlementParticipantCurrencyIdList = [1]
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           builderStub.join = sandbox.stub()
-          let joinStub = sandbox.stub()
-          let selectStub = sandbox.stub()
-          let whereInStub = sandbox.stub()
+          const joinStub = sandbox.stub()
+          const selectStub = sandbox.stub()
+          const whereInStub = sandbox.stub()
           builderStub.join.returns({
             join: joinStub.returns({
               select: selectStub.returns({
@@ -3990,7 +4536,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const settlementParticipantCurrencyIdList = { settlementId: 1 }
           Db.settlementParticipantCurrency = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementParticipantCurrency.query.callsArgWith(0, builderStub)
           await SettlementFacade.settlementParticipantCurrency.getSettlementAccountsByListOfIds(settlementParticipantCurrencyIdList)
           test.fail('Error not thrown!')
@@ -4016,21 +4562,21 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const params = { settlementId: 1, accountId: 1 }
           Db.settlementSettlementWindow = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementSettlementWindow.query.callsArgWith(0, builderStub)
           builderStub.join = sandbox.stub()
-          let join2Stub = sandbox.stub()
-          let context = sandbox.stub()
+          const join2Stub = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub()
-          let on2Stub = sandbox.stub()
+          const on2Stub = sandbox.stub()
           context.on.returns({
             on: on2Stub
           })
-          let join3Stub = sandbox.stub()
+          const join3Stub = sandbox.stub()
           join3Stub.callsArgOn(1, context)
-          let distinctStub = sandbox.stub()
-          let selectStub = sandbox.stub()
-          let whereStub = sandbox.stub()
+          const distinctStub = sandbox.stub()
+          const selectStub = sandbox.stub()
+          const whereStub = sandbox.stub()
           builderStub.join.returns({
             join: join2Stub.returns({
               join: join3Stub.returns({
@@ -4068,7 +4614,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
         try {
           const params = { settlementId: 1 }
           Db.settlementSettlementWindow = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementSettlementWindow.query.callsArgWith(0, builderStub)
           await SettlementFacade.settlementSettlementWindow.getWindowsBySettlementIdAndAccountId(params)
           test.fail('Error not thrown!')
@@ -4095,22 +4641,22 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const params = { settlementId: 1, accountId: 1 }
           const enums = { ledgerAccountTypes: { POSITION: 1 } }
           Db.settlementSettlementWindow = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementSettlementWindow.query.callsArgWith(0, builderStub)
           builderStub.join = sandbox.stub()
-          let join2Stub = sandbox.stub()
-          let context = sandbox.stub()
+          const join2Stub = sandbox.stub()
+          const context = sandbox.stub()
           context.on = sandbox.stub()
-          let onInStub = sandbox.stub()
+          const onInStub = sandbox.stub()
           context.on.returns({
             onIn: onInStub
           })
           Db.participantCurrency = { find: sandbox.stub().returns([{ participantCurrencyId: 1 }]) }
-          let join3Stub = sandbox.stub()
+          const join3Stub = sandbox.stub()
           join3Stub.callsArgOn(1, context)
-          let distinctStub = sandbox.stub()
-          let selectStub = sandbox.stub()
-          let whereStub = sandbox.stub()
+          const distinctStub = sandbox.stub()
+          const selectStub = sandbox.stub()
+          const whereStub = sandbox.stub()
           builderStub.join.returns({
             join: join2Stub.returns({
               join: join3Stub.returns({
@@ -4149,7 +4695,7 @@ Test('Settlement facade', async (settlementFacadeTest) => {
           const params = { settlementId: 1 }
           const enums = { ledgerAccountTypes: { POSITION: 1 } }
           Db.settlementSettlementWindow = { query: sandbox.stub() }
-          let builderStub = sandbox.stub()
+          const builderStub = sandbox.stub()
           Db.settlementSettlementWindow.query.callsArgWith(0, builderStub)
           await SettlementFacade.settlementSettlementWindow.getWindowsBySettlementIdAndParticipantId(params, enums)
           test.fail('Error not thrown!')

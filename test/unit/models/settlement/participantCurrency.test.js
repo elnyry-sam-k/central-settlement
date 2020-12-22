@@ -26,7 +26,7 @@
 
 const Test = require('tapes')(require('tape'))
 const Sinon = require('sinon')
-const Logger = require('@mojaloop/central-services-shared').Logger
+const Logger = require('@mojaloop/central-services-logger')
 const ParticipantCurrencyModel = require('../../../../src/models/settlement/participantCurrency')
 const Db = require('../../../../src/lib/db')
 
@@ -75,7 +75,7 @@ Test('ParticipantCurrencyModel', async (participantCurrencyModelTest) => {
             })
           })
 
-          let result = await ParticipantCurrencyModel.checkParticipantAccountExists(params, enums)
+          const result = await ParticipantCurrencyModel.checkParticipantAccountExists(params, enums)
           test.ok(result, 'Result returned')
           test.ok(builderStub.select.withArgs('participantCurrencyId').calledOnce, 'select with args ... called once')
           test.ok(whereStub.withArgs({ participantId }).calledOnce, 'where with args ... called once')

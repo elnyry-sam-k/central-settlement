@@ -26,7 +26,7 @@
 
 const Test = require('tapes')(require('tape'))
 const Sinon = require('sinon')
-const Logger = require('@mojaloop/central-services-shared').Logger
+const Logger = require('@mojaloop/central-services-logger')
 const SettlementWindowStateChangeModel = require('../../../../src/models/settlementWindow/settlementWindowStateChange')
 const Db = require('../../../../src/lib/db')
 
@@ -58,7 +58,7 @@ Test('SettlementModel', async (settlementWindowStateChangeModelTest) => {
             insert: sandbox.stub().returns(true)
           }
 
-          let result = await SettlementWindowStateChangeModel.create({ settlementWindowId, state, reason }, enums)
+          const result = await SettlementWindowStateChangeModel.create({ settlementWindowId, state, reason }, enums)
           test.ok(result, 'Result returned and matched')
           test.ok(Db.settlementWindowStateChange.insert.withArgs({
             settlementWindowId,

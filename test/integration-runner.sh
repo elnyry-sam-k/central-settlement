@@ -84,7 +84,7 @@ fcmd_centralledger() {
     --link $DB_HOST \
     --network $DOCKER_NETWORK \
     --env HOST_IP="$APP_HOST" \
-    --env CLEDG_DATABASE_URI="mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}" \
+    --volume ${PWD}/test/integration-config-centralledger.json:/opt/central-ledger/config/default.json \
     $CENTRAL_LEDGER_IMAGE:$CENTRAL_LEDGER_TAG \
     /bin/sh \
     -c "$@"
@@ -120,6 +120,11 @@ fcurl() {
     "jlekie/curl:latest" \
     --silent --head --fail \
     "$@"
+}
+
+# Make sure the service is a live, not necessarily healthy
+fcurl_alive() {
+  RESPONSE_CODE=$(fcurl "-s -I "$@" | grep HTTP/1.1 | awk {'print $2'}")
 }
 
 # Kafka functions
@@ -197,6 +202,7 @@ start_simulator () {
     --network $DOCKER_NETWORK \
     --name=$SIMULATOR_HOST \
     --env TRANSFERS_ENDPOINT=http://${ML_API_ADAPTER_HOST}:3000 \
+    --env LOG_LEVEL=debug \
     $SIMULATOR_IMAGE:$SIMULATOR_IMAGE_TAG
 }
 
@@ -205,12 +211,11 @@ is_simulator_up() {
 }
 
 start_central_ledger () {
-  docker run --rm -td \
+  docker run -td \
     -p 3001:3001 \
     --network $DOCKER_NETWORK \
     --name=$CENTRAL_LEDGER_HOST \
     --volume ${PWD}/test/integration-config-centralledger.json:/opt/central-ledger/config/default.json \
-    --env CLEDG_DATABASE_URI="mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}" \
     $CENTRAL_LEDGER_IMAGE:$CENTRAL_LEDGER_TAG
 }
 
@@ -224,7 +229,9 @@ start_ml_api_adapter () {
     --network $DOCKER_NETWORK \
     --name=$ML_API_ADAPTER_HOST \
     --volume ${PWD}/test/integration-config-mlapiadapter.json:/opt/ml-api-adapter/config/default.json \
-    $ML_API_ADAPTER_IMAGE:$ML_API_ADAPTER_TAG
+    --env MLAPI_ENDPOINT_HEALTH_URL="http://${CENTRAL_LEDGER_HOST}:3001/health" \
+    $ML_API_ADAPTER_IMAGE:$ML_API_ADAPTER_TAG \
+    sh -c "node src/api/index.js"
 }
 
 is_ml_api_adapter_up() {
@@ -279,7 +286,7 @@ until is_db_up; do
 done
 
 >&1 echo "Running migrations"
-fcmd_centralledger "apk add --no-cache nodejs-npm && npm install npm-run-all && npm run migrate"
+fcmd_centralledger "npm run migrate"
 
 if [ "$?" != 0 ]
 then
@@ -347,7 +354,7 @@ docker logs $APP_HOST
 >&1 echo "Copy results to local directory"
 docker cp $APP_HOST:$DOCKER_WORKING_DIR/$APP_DIR_TEST_RESULTS $TEST_DIR
 
-if [ "$test_exit_code" == 0 ]
+if [ "$test_exit_code" = "0" ]
 then
   >&1 echo "Showing results..."
   cat $APP_DIR_TEST_RESULTS/$TEST_RESULTS_FILE
